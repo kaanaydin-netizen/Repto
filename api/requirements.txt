@@ -1,0 +1,39 @@
+# Web framework
+fastapi==0.115.5
+uvicorn[standard]==0.32.1
+
+# Database
+sqlalchemy==2.0.36
+asyncpg==0.30.0
+alembic==1.14.0
+
+# AI
+anthropic==0.40.0
+
+# HTTP client
+httpx==0.28.0
+
+# WhatsApp / externe APIs
+python-multipart==0.0.12
+
+# Google Sheets
+google-auth==2.37.0
+google-api-python-client==2.154.0
+
+# Config & validatie
+pydantic==2.10.3
+pydantic-settings==2.7.0
+python-dotenv==1.0.1
+
+# Payments
+stripe==11.4.0
+
+# Email
+resend==2.5.0
+
+# Scheduling (herinneringen)
+apscheduler==3.10.4
+
+# Utils
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4

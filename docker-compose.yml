@@ -1,0 +1,42 @@
+version: "3.9"
+
+services:
+  # ── FastAPI Backend ───────────────────────────────────────
+  api:
+    build: ./api
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      - ./api:/app
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    depends_on:
+      - db
+
+  # ── Next.js Frontend ─────────────────────────────────────
+  web:
+    build: ./web
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    volumes:
+      - ./web:/app
+      - /app/node_modules
+      - /app/.next
+
+  # ── PostgreSQL (lokale dev, productie = Supabase) ────────
+  db:
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: repto
+      POSTGRES_PASSWORD: repto_dev
+      POSTGRES_DB: repto
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
