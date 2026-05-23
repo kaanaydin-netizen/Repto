@@ -2,6 +2,7 @@
 AI Service — genereert antwoorden via Anthropic Claude.
 Gebruikt prompt caching voor lagere kosten bij hoog berichtenvolume.
 """
+from __future__ import annotations
 import anthropic
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select

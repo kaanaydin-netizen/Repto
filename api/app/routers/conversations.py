@@ -1,6 +1,8 @@
 """
 Conversations API — voor het dashboard om gesprekken op te halen en te beheren.
 """
+from __future__ import annotations
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
@@ -13,7 +15,7 @@ router = APIRouter(prefix="/conversations", tags=["conversations"])
 @router.get("/")
 async def list_conversations(
     org_id: str,
-    status: str | None = None,
+    status: Optional[str] = None,
     limit: int = 50,
     db: AsyncSession = Depends(get_db),
 ):

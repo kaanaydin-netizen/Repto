@@ -2,6 +2,7 @@
 WhatsApp webhook handler — ontvangt inkomende berichten van Meta Cloud API
 en triggert de AI-verwerking.
 """
+from __future__ import annotations
 from fastapi import APIRouter, Request, HTTPException, Depends, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import get_settings
@@ -15,9 +16,9 @@ settings = get_settings()
 
 @router.get("/whatsapp")
 async def verify_webhook(
-    hub_mode: str | None = None,
-    hub_verify_token: str | None = None,
-    hub_challenge: str | None = None,
+    hub_mode: str = None,
+    hub_verify_token: str = None,
+    hub_challenge: str = None,
 ):
     """
     Meta stuurt een GET-verzoek om de webhook te verifiëren.

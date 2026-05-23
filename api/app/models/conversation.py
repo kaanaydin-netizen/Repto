@@ -1,4 +1,10 @@
-from sqlalchemy import String, Text, DateTime, Boolean, ForeignKey, Enum
+"""
+Database modellen voor Repto.
+Gebruik van SQLAlchemy 2.0 Mapped-stijl, compatibel met Python 3.9.
+GEEN from __future__ import annotations — dit botst met SQLAlchemy op Python 3.9.
+"""
+from typing import Optional, List
+from sqlalchemy import String, Text, DateTime, Boolean, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 from app.database import Base
@@ -24,19 +30,19 @@ class Organization(Base):
 
     id: Mapped[str] = mapped_column(String, primary_key=True)
     name: Mapped[str] = mapped_column(String, nullable=False)
-    sector: Mapped[str | None] = mapped_column(String)
-    whatsapp_number: Mapped[str | None] = mapped_column(String)
-    whatsapp_phone_number_id: Mapped[str | None] = mapped_column(String)
+    sector: Mapped[Optional[str]] = mapped_column(String)
+    whatsapp_number: Mapped[Optional[str]] = mapped_column(String)
+    whatsapp_phone_number_id: Mapped[Optional[str]] = mapped_column(String)
     # AI configuratie
-    ai_system_prompt: Mapped[str | None] = mapped_column(Text)
+    ai_system_prompt: Mapped[Optional[str]] = mapped_column(Text)
     ai_tone: Mapped[str] = mapped_column(String, default="formeel")
     # CRM
     crm_type: Mapped[str] = mapped_column(String, default="none")
-    crm_credentials_encrypted: Mapped[str | None] = mapped_column(Text)
-    crm_sheet_id: Mapped[str | None] = mapped_column(String)  # Google Sheets
+    crm_credentials_encrypted: Mapped[Optional[str]] = mapped_column(Text)
+    crm_sheet_id: Mapped[Optional[str]] = mapped_column(String)
     created_at: Mapped[DateTime] = mapped_column(DateTime, server_default=func.now())
 
-    conversations: Mapped[list["Conversation"]] = relationship(back_populates="organization")
+    conversations: Mapped[List["Conversation"]] = relationship(back_populates="organization")
 
 
 class Conversation(Base):
@@ -45,16 +51,16 @@ class Conversation(Base):
     id: Mapped[str] = mapped_column(String, primary_key=True)
     org_id: Mapped[str] = mapped_column(String, ForeignKey("organizations.id"), nullable=False)
     wa_contact_phone: Mapped[str] = mapped_column(String, nullable=False)
-    wa_contact_name: Mapped[str | None] = mapped_column(String)
+    wa_contact_name: Mapped[Optional[str]] = mapped_column(String)
     status: Mapped[str] = mapped_column(String, default="new")
-    crm_synced_at: Mapped[DateTime | None] = mapped_column(DateTime)
+    crm_synced_at: Mapped[Optional[DateTime]] = mapped_column(DateTime)
     created_at: Mapped[DateTime] = mapped_column(DateTime, server_default=func.now())
     updated_at: Mapped[DateTime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
 
     organization: Mapped["Organization"] = relationship(back_populates="conversations")
-    messages: Mapped[list["Message"]] = relationship(back_populates="conversation")
-    appointments: Mapped[list["Appointment"]] = relationship(back_populates="conversation")
-    followup_tasks: Mapped[list["FollowupTask"]] = relationship(back_populates="conversation")
+    messages: Mapped[List["Message"]] = relationship(back_populates="conversation")
+    appointments: Mapped[List["Appointment"]] = relationship(back_populates="conversation")
+    followup_tasks: Mapped[List["FollowupTask"]] = relationship(back_populates="conversation")
 
 
 class Message(Base):
@@ -65,7 +71,7 @@ class Message(Base):
     direction: Mapped[str] = mapped_column(String, nullable=False)  # 'inbound' | 'outbound'
     content: Mapped[str] = mapped_column(Text, nullable=False)
     ai_generated: Mapped[bool] = mapped_column(Boolean, default=False)
-    wa_message_id: Mapped[str | None] = mapped_column(String)
+    wa_message_id: Mapped[Optional[str]] = mapped_column(String)
     sent_at: Mapped[DateTime] = mapped_column(DateTime, server_default=func.now())
 
     conversation: Mapped["Conversation"] = relationship(back_populates="messages")
@@ -80,9 +86,9 @@ class Appointment(Base):
     title: Mapped[str] = mapped_column(String, nullable=False)
     start_at: Mapped[DateTime] = mapped_column(DateTime, nullable=False)
     end_at: Mapped[DateTime] = mapped_column(DateTime, nullable=False)
-    status: Mapped[str] = mapped_column(String, default="confirmed")  # confirmed | cancelled
+    status: Mapped[str] = mapped_column(String, default="confirmed")
     reminder_sent: Mapped[bool] = mapped_column(Boolean, default=False)
-    google_event_id: Mapped[str | None] = mapped_column(String)
+    google_event_id: Mapped[Optional[str]] = mapped_column(String)
     created_at: Mapped[DateTime] = mapped_column(DateTime, server_default=func.now())
 
     conversation: Mapped["Conversation"] = relationship(back_populates="appointments")
@@ -95,7 +101,7 @@ class FollowupTask(Base):
     conversation_id: Mapped[str] = mapped_column(String, ForeignKey("conversations.id"), nullable=False)
     send_at: Mapped[DateTime] = mapped_column(DateTime, nullable=False)
     message_template: Mapped[str] = mapped_column(Text, nullable=False)
-    status: Mapped[str] = mapped_column(String, default="pending")  # pending | sent | cancelled
+    status: Mapped[str] = mapped_column(String, default="pending")
 
     conversation: Mapped["Conversation"] = relationship(back_populates="followup_tasks")
 
@@ -106,7 +112,7 @@ class CrmSyncLog(Base):
     id: Mapped[str] = mapped_column(String, primary_key=True)
     conversation_id: Mapped[str] = mapped_column(String, ForeignKey("conversations.id"), nullable=False)
     crm_type: Mapped[str] = mapped_column(String, nullable=False)
-    external_id: Mapped[str | None] = mapped_column(String)
+    external_id: Mapped[Optional[str]] = mapped_column(String)
     synced_at: Mapped[DateTime] = mapped_column(DateTime, server_default=func.now())
     success: Mapped[bool] = mapped_column(Boolean, default=True)
-    error_message: Mapped[str | None] = mapped_column(Text)
+    error_message: Mapped[Optional[str]] = mapped_column(Text)

@@ -2,6 +2,8 @@
 WhatsApp Service — communicatie met Meta Cloud API.
 Berichten sturen, gesprekken beheren en CRM-sync triggeren.
 """
+from __future__ import annotations
+from typing import Optional
 import httpx
 import uuid
 from datetime import datetime
@@ -25,7 +27,7 @@ class WhatsAppService:
         self,
         phone_number_id: str,
         contact_phone: str,
-        contact_name: str | None,
+        contact_name: Optional[str],
     ) -> Conversation:
         """Haal een bestaand gesprek op of maak een nieuw aan."""
         # Organisatie zoeken op basis van WhatsApp phone_number_id
@@ -69,7 +71,7 @@ class WhatsAppService:
         direction: str,
         content: str,
         ai_generated: bool = False,
-        wa_message_id: str | None = None,
+        wa_message_id: Optional[str] = None,
     ) -> Message:
         """Sla een bericht op in de database."""
         message = Message(
