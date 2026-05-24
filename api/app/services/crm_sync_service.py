@@ -1,13 +1,16 @@
 """
 CRM Sync Service — synchroniseert nieuwe leads naar:
-  MVP:    Google Sheets
+  MVP:    Google Sheets (via Apps Script webhook)
   Fase 2: HubSpot, Pipedrive
 """
+from __future__ import annotations
+import json
 import uuid
-import httpx
 from datetime import datetime
+import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.models.conversation import Conversation, Organization, CrmSyncLog
+from sqlalchemy import select
+from app.models.conversation import Conversation, Organization, CrmSyncLog, Message
 
 
 class CrmSyncService:
@@ -36,9 +39,9 @@ class CrmSyncService:
             )
             self.db.add(log)
             await self.db.commit()
+            print(f"✅ CRM sync geslaagd: {conversation.wa_contact_phone} → {org.crm_type}")
 
         except Exception as e:
-            # Log de mislukte sync maar blokkeer de flow niet
             log = CrmSyncLog(
                 id=str(uuid.uuid4()),
                 conversation_id=conversation.id,
@@ -48,40 +51,52 @@ class CrmSyncService:
             )
             self.db.add(log)
             await self.db.commit()
-            print(f"CRM sync mislukt voor gesprek {conversation.id}: {e}")
+            print(f"❌ CRM sync mislukt voor gesprek {conversation.id}: {e}")
 
     async def _sync_google_sheets(
         self, conversation: Conversation, org: Organization
     ) -> str:
         """
-        Voeg een nieuwe rij toe aan het Google Sheet van de organisatie.
-        Kolommen: Naam | Telefoon | Datum | Status | Eerste bericht
+        Voeg een nieuwe lead toe aan Google Sheets via Apps Script webhook.
+        org.crm_credentials_encrypted bevat JSON: {"webhook_url": "https://script.google.com/..."}
         """
-        # TODO: Google Sheets API integratie implementeren
-        # Vereist: google-auth service account of OAuth2 token
-        # org.crm_sheet_id bevat het Sheet ID
-        # org.crm_credentials_encrypted bevat het service account JSON (encrypted)
-        print(f"[TODO] Google Sheets sync voor {conversation.wa_contact_phone} → Sheet {org.crm_sheet_id}")
-        return f"sheets_row_{conversation.id[:8]}"
+        if not org.crm_credentials_encrypted:
+            raise ValueError("Google Sheets webhook URL niet geconfigureerd")
 
-    async def _sync_hubspot(
-        self, conversation: Conversation, org: Organization
-    ) -> str:
-        """
-        Maak een contact aan in HubSpot.
-        Fase 2 — nog niet geïmplementeerd in MVP.
-        """
-        # TODO: HubSpot API implementeren (fase 2)
-        # POST https://api.hubapi.com/crm/v3/objects/contacts
+        config = json.loads(org.crm_credentials_encrypted)
+        webhook_url = config.get("webhook_url")
+        if not webhook_url:
+            raise ValueError("webhook_url ontbreekt in crm_credentials_encrypted")
+
+        # Eerste inkomende bericht ophalen
+        msgs_result = await self.db.execute(
+            select(Message)
+            .where(
+                Message.conversation_id == conversation.id,
+                Message.direction == "inbound",
+            )
+            .order_by(Message.sent_at.asc())
+            .limit(1)
+        )
+        first_message = msgs_result.scalar_one_or_none()
+
+        payload = {
+            "datum": datetime.now().strftime("%d/%m/%Y %H:%M"),
+            "naam": conversation.wa_contact_name or "Onbekend",
+            "telefoon": conversation.wa_contact_phone,
+            "status": conversation.status,
+            "eerste_bericht": (first_message.content[:200] if first_message else ""),
+        }
+
+        # POST naar de Apps Script webhook (follow_redirects=True voor Google redirect)
+        async with httpx.AsyncClient(follow_redirects=True, timeout=15.0) as client:
+            response = await client.post(webhook_url, json=payload)
+            response.raise_for_status()
+
+        return f"sheets_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+
+    async def _sync_hubspot(self, conversation: Conversation, org: Organization) -> str:
         raise NotImplementedError("HubSpot integratie is gepland voor fase 2")
 
-    async def _sync_pipedrive(
-        self, conversation: Conversation, org: Organization
-    ) -> str:
-        """
-        Maak een persoon + deal aan in Pipedrive.
-        Fase 2 — nog niet geïmplementeerd in MVP.
-        """
-        # TODO: Pipedrive API implementeren (fase 2)
-        # POST https://{domain}.pipedrive.com/api/v1/persons
+    async def _sync_pipedrive(self, conversation: Conversation, org: Organization) -> str:
         raise NotImplementedError("Pipedrive integratie is gepland voor fase 2")
