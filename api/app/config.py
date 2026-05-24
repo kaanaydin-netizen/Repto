@@ -1,3 +1,4 @@
+from typing import Optional
 from pydantic_settings import BaseSettings
 from functools import lru_cache
 
@@ -11,28 +12,31 @@ class Settings(BaseSettings):
     # Database (Supabase PostgreSQL)
     database_url: str
 
-    # WhatsApp (Meta Cloud API)
-    whatsapp_verify_token: str
-    whatsapp_access_token: str
-    whatsapp_phone_number_id: str
+    # Twilio WhatsApp
+    twilio_account_sid: str
+    twilio_auth_token: str
+    twilio_whatsapp_from: str  # bijv. "whatsapp:+14155238886"
+
+    # Webhook verificatie token (zelf kiezen, zelfde in .env + Twilio dashboard)
+    whatsapp_verify_token: str = "repto_webhook_2026"
 
     # AI (Anthropic)
     anthropic_api_key: str
 
-    # Auth (Clerk)
-    clerk_secret_key: str
-    clerk_publishable_key: str
+    # Auth (Clerk) — optioneel fase 2
+    clerk_secret_key: Optional[str] = None
+    clerk_publishable_key: Optional[str] = None
 
-    # Stripe
-    stripe_secret_key: str
-    stripe_webhook_secret: str
+    # Stripe — optioneel fase 2
+    stripe_secret_key: Optional[str] = None
+    stripe_webhook_secret: Optional[str] = None
 
-    # Email (Resend)
-    resend_api_key: str
+    # Email (Resend) — optioneel fase 2
+    resend_api_key: Optional[str] = None
 
-    # Google (Sheets + Calendar)
-    google_client_id: str
-    google_client_secret: str
+    # Google (Sheets + Calendar) — optioneel fase 2
+    google_client_id: Optional[str] = None
+    google_client_secret: Optional[str] = None
 
     # Frontend URL (voor CORS)
     frontend_url: str = "http://localhost:3000"

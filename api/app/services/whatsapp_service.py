@@ -1,12 +1,11 @@
 """
-WhatsApp Service — communicatie met Meta Cloud API.
+WhatsApp Service — communicatie via Twilio WhatsApp API.
 Berichten sturen, gesprekken beheren en CRM-sync triggeren.
 """
 from __future__ import annotations
 from typing import Optional
 import httpx
 import uuid
-from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.config import get_settings
@@ -15,7 +14,10 @@ from app.services.crm_sync_service import CrmSyncService
 
 settings = get_settings()
 
-WHATSAPP_API_URL = "https://graph.facebook.com/v21.0"
+TWILIO_MESSAGES_URL = (
+    f"https://api.twilio.com/2010-04-01/Accounts"
+    f"/{settings.twilio_account_sid}/Messages.json"
+)
 
 
 class WhatsAppService:
@@ -25,22 +27,29 @@ class WhatsAppService:
 
     async def get_or_create_conversation(
         self,
-        phone_number_id: str,
+        twilio_to_phone: str,
         contact_phone: str,
         contact_name: Optional[str],
     ) -> Conversation:
-        """Haal een bestaand gesprek op of maak een nieuw aan."""
-        # Organisatie zoeken op basis van WhatsApp phone_number_id
+        """
+        Haal een bestaand gesprek op of maak een nieuw aan.
+        twilio_to_phone: het Twilio sandbox nummer (bijv. 'whatsapp:+14155238886')
+        contact_phone:   het nummer van de klant (zonder 'whatsapp:' prefix)
+        """
+        # Organisatie zoeken op basis van het Twilio WhatsApp-nummer
         org_result = await self.db.execute(
             select(Organization).where(
-                Organization.whatsapp_phone_number_id == phone_number_id
+                Organization.whatsapp_phone_number_id == twilio_to_phone
             )
         )
         org = org_result.scalar_one_or_none()
         if not org:
-            raise ValueError(f"Geen organisatie gevonden voor phone_number_id: {phone_number_id}")
+            raise ValueError(
+                f"Geen organisatie gevonden voor Twilio nummer: {twilio_to_phone}. "
+                f"Voer seed_dev.py uit om een test-organisatie aan te maken."
+            )
 
-        # Bestaand gesprek zoeken
+        # Bestaand open gesprek zoeken
         conv_result = await self.db.execute(
             select(Conversation).where(
                 Conversation.org_id == org.id,
@@ -88,32 +97,28 @@ class WhatsAppService:
 
     async def send_message(
         self,
-        phone_number_id: str,
         to_phone: str,
         message: str,
     ) -> dict:
-        """Stuur een tekstbericht via de Meta Cloud API."""
-        url = f"{WHATSAPP_API_URL}/{phone_number_id}/messages"
-        headers = {
-            "Authorization": f"Bearer {settings.whatsapp_access_token}",
-            "Content-Type": "application/json",
-        }
-        payload = {
-            "messaging_product": "whatsapp",
-            "recipient_type": "individual",
-            "to": to_phone,
-            "type": "text",
-            "text": {"body": message},
-        }
-
+        """
+        Stuur een tekstbericht via de Twilio WhatsApp API.
+        to_phone: telefoonnummer van de ontvanger (zonder 'whatsapp:' prefix)
+        """
         async with httpx.AsyncClient() as client:
-            response = await client.post(url, json=payload, headers=headers)
+            response = await client.post(
+                TWILIO_MESSAGES_URL,
+                auth=(settings.twilio_account_sid, settings.twilio_auth_token),
+                data={
+                    "From": settings.twilio_whatsapp_from,
+                    "To": f"whatsapp:{to_phone}",
+                    "Body": message,
+                },
+            )
             response.raise_for_status()
             return response.json()
 
     async def sync_to_crm(self, conversation: Conversation) -> None:
         """Synchroniseer het gesprek naar het geconfigureerde CRM."""
-        # Organisatie ophalen voor CRM-type
         org_result = await self.db.execute(
             select(Organization).where(Organization.id == conversation.org_id)
         )
@@ -128,5 +133,4 @@ class WhatsAppService:
         if sync_result.scalar_one_or_none():
             return  # Niet dubbel synchroniseren
 
-        # CRM sync uitvoeren
         await self.crm_sync.sync(conversation=conversation, org=org)

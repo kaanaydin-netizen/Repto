@@ -1,32 +1,15 @@
 """
-WhatsApp webhook handler — ontvangt inkomende berichten van Meta Cloud API
-en triggert de AI-verwerking.
+WhatsApp webhook handler — ontvangt inkomende berichten van Twilio WhatsApp API
+en triggert de AI-verwerking op de achtergrond.
 """
 from __future__ import annotations
-from fastapi import APIRouter, Request, HTTPException, Depends, BackgroundTasks
+from fastapi import APIRouter, Request, Depends, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.config import get_settings
 from app.database import get_db
 from app.services.whatsapp_service import WhatsAppService
 from app.services.ai_service import AIService
 
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
-settings = get_settings()
-
-
-@router.get("/whatsapp")
-async def verify_webhook(
-    hub_mode: str = None,
-    hub_verify_token: str = None,
-    hub_challenge: str = None,
-):
-    """
-    Meta stuurt een GET-verzoek om de webhook te verifiëren.
-    Geef de challenge terug als het verify_token klopt.
-    """
-    if hub_mode == "subscribe" and hub_verify_token == settings.whatsapp_verify_token:
-        return int(hub_challenge)
-    raise HTTPException(status_code=403, detail="Verificatie mislukt")
 
 
 @router.post("/whatsapp")
@@ -36,94 +19,96 @@ async def receive_message(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Ontvangt inkomende WhatsApp-berichten van Meta.
-    Verwerkt het bericht asynchroon op de achtergrond.
+    Ontvangt inkomende WhatsApp-berichten via Twilio.
+    Twilio stuurt form-data (application/x-www-form-urlencoded).
     """
-    payload = await request.json()
+    form = await request.form()
 
-    # Verwerk elk inkomend bericht
-    try:
-        for entry in payload.get("entry", []):
-            for change in entry.get("changes", []):
-                value = change.get("value", {})
-                messages = value.get("messages", [])
+    # Twilio velden uitlezen
+    from_phone   = str(form.get("From", "")).replace("whatsapp:", "")  # strip prefix
+    to_phone     = str(form.get("To", ""))                             # Twilio sandbox nummer (incl. prefix)
+    body         = str(form.get("Body", "")).strip()
+    contact_name = form.get("ProfileName")
+    message_sid  = form.get("MessageSid")
 
-                for message in messages:
-                    # Verwerk bericht op de achtergrond (niet de webhook blokkeren)
-                    background_tasks.add_task(
-                        process_incoming_message,
-                        message=message,
-                        metadata=value.get("metadata", {}),
-                        contacts=value.get("contacts", []),
-                        db=db,
-                    )
-    except Exception as e:
-        # Log de fout maar geef altijd 200 terug aan Meta
-        print(f"Fout bij verwerking webhook: {e}")
+    # Lege berichten negeren
+    if not from_phone or not body:
+        return {"status": "ok"}
 
-    return {"status": "ok"}
+    # Verwerk asynchroon op de achtergrond (blokkeert Twilio niet)
+    background_tasks.add_task(
+        process_incoming_message,
+        from_phone=from_phone,
+        to_phone=to_phone,
+        body=body,
+        contact_name=contact_name,
+        message_sid=message_sid,
+        db=db,
+    )
+
+    # Twilio verwacht een lege 200 OK (of TwiML) — wij sturen leeg terug
+    return {}
 
 
 async def process_incoming_message(
-    message: dict,
-    metadata: dict,
-    contacts: list,
+    from_phone: str,
+    to_phone: str,
+    body: str,
+    contact_name: str | None,
+    message_sid: str | None,
     db: AsyncSession,
-):
+) -> None:
     """
-    Verwerkt een inkomend WhatsApp-bericht:
+    Volledige verwerking van een inkomend WhatsApp-bericht:
     1. Gesprek ophalen of aanmaken
-    2. Bericht opslaan
+    2. Inkomend bericht opslaan
     3. AI-antwoord genereren
-    4. Antwoord versturen via WhatsApp
-    5. CRM synchroniseren (Google Sheets)
+    4. Antwoord versturen via Twilio
+    5. Uitgaand bericht opslaan
+    6. CRM synchroniseren (Google Sheets voor MVP)
     """
     wa_service = WhatsAppService(db)
     ai_service = AIService(db)
 
-    phone_number_id = metadata.get("phone_number_id")
-    from_phone = message.get("from")
-    contact_name = contacts[0].get("profile", {}).get("name") if contacts else None
-    message_text = message.get("text", {}).get("body", "") if message.get("type") == "text" else ""
+    try:
+        # Gesprek ophalen of aanmaken (org wordt opgezocht via to_phone)
+        conversation = await wa_service.get_or_create_conversation(
+            twilio_to_phone=to_phone,
+            contact_phone=from_phone,
+            contact_name=contact_name,
+        )
 
-    if not from_phone or not message_text:
-        return
+        # Inkomend bericht opslaan
+        await wa_service.save_message(
+            conversation_id=conversation.id,
+            direction="inbound",
+            content=body,
+            wa_message_id=message_sid,
+        )
 
-    # Gesprek ophalen of aanmaken
-    conversation = await wa_service.get_or_create_conversation(
-        phone_number_id=phone_number_id,
-        contact_phone=from_phone,
-        contact_name=contact_name,
-    )
+        # AI-antwoord genereren
+        reply = await ai_service.generate_reply(
+            conversation=conversation,
+            incoming_message=body,
+        )
 
-    # Inkomend bericht opslaan
-    await wa_service.save_message(
-        conversation_id=conversation.id,
-        direction="inbound",
-        content=message_text,
-        wa_message_id=message.get("id"),
-    )
+        # Antwoord versturen via Twilio
+        await wa_service.send_message(
+            to_phone=from_phone,
+            message=reply,
+        )
 
-    # AI-antwoord genereren
-    reply = await ai_service.generate_reply(
-        conversation=conversation,
-        incoming_message=message_text,
-    )
+        # Uitgaand bericht opslaan
+        await wa_service.save_message(
+            conversation_id=conversation.id,
+            direction="outbound",
+            content=reply,
+            ai_generated=True,
+        )
 
-    # Antwoord versturen
-    await wa_service.send_message(
-        phone_number_id=phone_number_id,
-        to_phone=from_phone,
-        message=reply,
-    )
+        # CRM sync (Google Sheets voor MVP)
+        await wa_service.sync_to_crm(conversation=conversation)
 
-    # Antwoord opslaan
-    await wa_service.save_message(
-        conversation_id=conversation.id,
-        direction="outbound",
-        content=reply,
-        ai_generated=True,
-    )
-
-    # CRM sync (Google Sheets voor MVP)
-    await wa_service.sync_to_crm(conversation=conversation)
+    except Exception as e:
+        print(f"❌ Fout bij verwerking bericht van {from_phone}: {e}")
+        raise
