@@ -88,9 +88,11 @@ class CrmSyncService:
             "eerste_bericht": (first_message.content[:200] if first_message else ""),
         }
 
-        # POST naar de Apps Script webhook (follow_redirects=True voor Google redirect)
+        # Google Apps Script stuurt een 302 redirect naar googleusercontent.com.
+        # httpx converteert POST→GET op 302 (standaard HTTP gedrag) — dit is correct.
         async with httpx.AsyncClient(follow_redirects=True, timeout=15.0) as client:
-            response = await client.post(webhook_url, json=payload)
+            response = await client.post(webhook_url, content=json.dumps(payload).encode(),
+                                         headers={"Content-Type": "application/json"})
             response.raise_for_status()
 
         return f"sheets_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
