@@ -1,2 +1,466 @@
+import { auth } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
-export default function Home() { redirect('/dashboard') }
+import Link from 'next/link'
+import {
+  Zap,
+  MessageSquare,
+  Database,
+  LayoutDashboard,
+  Bot,
+  ArrowRight,
+  Check,
+  Phone,
+  Clock,
+  Users,
+  TrendingUp,
+} from 'lucide-react'
+
+// ─── Redirect ingelogde gebruikers ────────────────────────────────────────────
+
+export default async function HomePage() {
+  try {
+    const { userId } = await auth()
+    if (userId) redirect('/dashboard')
+  } catch {
+    // Niet ingelogd of auth niet beschikbaar — toon landing page
+  }
+
+  return (
+    <div className="min-h-screen bg-white">
+
+      {/* ── Navigatie ──────────────────────────────────────────────────────── */}
+      <header className="sticky top-0 z-50 border-b border-gray-100 bg-white/95 backdrop-blur">
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
+          {/* Logo */}
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600">
+              <Zap className="h-4 w-4 text-white" />
+            </div>
+            <span className="text-lg font-bold text-gray-900">Repto</span>
+          </div>
+
+          {/* Links */}
+          <nav className="hidden items-center gap-6 text-sm font-medium text-gray-600 sm:flex">
+            <a href="#features" className="hover:text-gray-900 transition-colors">Features</a>
+            <a href="#hoe-werkt-het" className="hover:text-gray-900 transition-colors">Hoe het werkt</a>
+            <a href="#prijzen" className="hover:text-gray-900 transition-colors">Prijzen</a>
+          </nav>
+
+          {/* CTA */}
+          <div className="flex items-center gap-3">
+            <Link
+              href="/sign-in"
+              className="hidden text-sm font-medium text-gray-600 hover:text-gray-900 sm:block"
+            >
+              Aanmelden
+            </Link>
+            <Link
+              href="/sign-in"
+              className="flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 transition-colors"
+            >
+              Aan de slag <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+        </div>
+      </header>
+
+      {/* ── Hero ──────────────────────────────────────────────────────────── */}
+      <section className="relative overflow-hidden bg-white pt-16 pb-24">
+        {/* Achtergrond gradient */}
+        <div className="pointer-events-none absolute inset-0 -top-40 bg-gradient-to-br from-indigo-50 via-white to-white" />
+
+        <div className="relative mx-auto max-w-4xl px-6 text-center">
+          {/* Badge */}
+          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-4 py-1.5 text-sm font-medium text-indigo-700">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-indigo-500" />
+            WhatsApp AI voor Belgische & Nederlandse KMO's
+          </div>
+
+          {/* Headline */}
+          <h1 className="text-5xl font-extrabold leading-tight tracking-tight text-gray-900 sm:text-6xl">
+            De AI-receptionist<br />
+            <span className="text-indigo-600">die nooit slaapt.</span>
+          </h1>
+
+          {/* Sub */}
+          <p className="mx-auto mt-6 max-w-2xl text-xl leading-relaxed text-gray-500">
+            Repto beantwoordt automatisch WhatsApp-berichten van klanten,
+            verzamelt lead-info en synchroniseert naar je CRM —
+            terwijl jij focus hebt op je werk.
+          </p>
+
+          {/* CTA knoppen */}
+          <div className="mt-10 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+            <Link
+              href="/sign-in"
+              className="flex items-center gap-2 rounded-xl bg-indigo-600 px-7 py-3.5 text-base font-semibold text-white shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all hover:scale-105"
+            >
+              Gratis proberen <ArrowRight className="h-5 w-5" />
+            </Link>
+            <a
+              href="#hoe-werkt-het"
+              className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-7 py-3.5 text-base font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              Hoe het werkt
+            </a>
+          </div>
+
+          {/* Social proof */}
+          <p className="mt-8 text-sm text-gray-400">
+            ✓ Geen creditcard vereist &nbsp;·&nbsp; ✓ Klaar in 5 minuten &nbsp;·&nbsp; ✓ Opzeggen wanneer je wil
+          </p>
+        </div>
+
+        {/* Dashboard preview */}
+        <div className="relative mx-auto mt-16 max-w-5xl px-6">
+          <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl shadow-gray-200">
+            {/* Nep browser chrome */}
+            <div className="flex items-center gap-2 border-b border-gray-100 bg-gray-50 px-4 py-3">
+              <span className="h-3 w-3 rounded-full bg-red-400" />
+              <span className="h-3 w-3 rounded-full bg-amber-400" />
+              <span className="h-3 w-3 rounded-full bg-green-400" />
+              <span className="ml-4 flex-1 rounded-md bg-white px-3 py-1 text-xs text-gray-400 ring-1 ring-gray-200">
+                app.repto.be/dashboard
+              </span>
+            </div>
+
+            {/* Dashboard screenshot mockup */}
+            <div className="flex bg-white">
+              {/* Sidebar */}
+              <div className="hidden w-52 border-r border-gray-100 bg-white p-4 sm:block">
+                <div className="mb-4 flex items-center gap-2">
+                  <div className="h-7 w-7 rounded-lg bg-indigo-600 flex items-center justify-center">
+                    <Zap className="h-3.5 w-3.5 text-white" />
+                  </div>
+                  <span className="text-sm font-bold text-gray-900">Repto</span>
+                </div>
+                {[
+                  { icon: LayoutDashboard, label: 'Dashboard', active: true },
+                  { icon: MessageSquare, label: 'Gesprekken', active: false },
+                  { icon: Bot, label: 'AI-instellingen', active: false },
+                  { icon: Database, label: 'CRM', active: false },
+                ].map(({ icon: Icon, label, active }) => (
+                  <div
+                    key={label}
+                    className={`mb-1 flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium ${
+                      active ? 'bg-indigo-50 text-indigo-700' : 'text-gray-500'
+                    }`}
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                    {label}
+                  </div>
+                ))}
+              </div>
+
+              {/* Main */}
+              <div className="flex-1 p-6">
+                <p className="mb-4 text-sm font-semibold text-gray-900">Dashboard</p>
+                {/* Stat cards */}
+                <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  {[
+                    { label: 'Gesprekken', value: '48', color: 'bg-indigo-50 text-indigo-700' },
+                    { label: 'Nieuwe leads', value: '12', color: 'bg-amber-50 text-amber-700' },
+                    { label: 'Gesloten', value: '7', color: 'bg-green-50 text-green-700' },
+                    { label: 'CRM sync', value: '35', color: 'bg-blue-50 text-blue-700' },
+                  ].map(stat => (
+                    <div key={stat.label} className="rounded-xl border border-gray-100 bg-gray-50 p-3">
+                      <p className="text-xs text-gray-400">{stat.label}</p>
+                      <p className={`mt-1 text-2xl font-bold ${stat.color.split(' ')[1]}`}>{stat.value}</p>
+                    </div>
+                  ))}
+                </div>
+                {/* Gesprekken */}
+                <div className="space-y-2">
+                  {[
+                    { name: 'Thomas De Smedt', msg: 'Ik heb een lek in mijn badkamer...', time: '09:34', badge: 'Nieuw' },
+                    { name: 'Sofie Vermeersch', msg: 'Wanneer kunnen jullie langskomen?', time: 'Gisteren', badge: 'In gesprek' },
+                    { name: 'Jan Claes', msg: 'Bedankt, ik wacht jullie telefoontje af.', time: 'Ma', badge: 'Gesloten' },
+                  ].map(c => (
+                    <div key={c.name} className="flex items-center gap-3 rounded-xl border border-gray-100 bg-white p-3">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-700">
+                        {c.name[0]}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-xs font-semibold text-gray-900">{c.name}</p>
+                        <p className="truncate text-[10px] text-gray-400">{c.msg}</p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="text-[10px] text-gray-400">{c.time}</p>
+                        <span className={`mt-0.5 inline-block rounded-full px-1.5 py-0.5 text-[9px] font-semibold ${
+                          c.badge === 'Nieuw' ? 'bg-amber-100 text-amber-700' :
+                          c.badge === 'In gesprek' ? 'bg-indigo-100 text-indigo-700' :
+                          'bg-gray-100 text-gray-500'
+                        }`}>
+                          {c.badge}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Stats strip ───────────────────────────────────────────────────── */}
+      <section className="border-y border-gray-100 bg-gray-50 py-10">
+        <div className="mx-auto max-w-5xl px-6">
+          <div className="grid grid-cols-2 gap-8 text-center sm:grid-cols-4">
+            {[
+              { value: '24/7', label: 'Beschikbaar' },
+              { value: '< 5s', label: 'Reactietijd' },
+              { value: '9+', label: 'Sectoren' },
+              { value: '100%', label: 'Automatisch' },
+            ].map(s => (
+              <div key={s.label}>
+                <p className="text-3xl font-extrabold text-indigo-600">{s.value}</p>
+                <p className="mt-1 text-sm text-gray-500">{s.label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Features ──────────────────────────────────────────────────────── */}
+      <section id="features" className="py-24">
+        <div className="mx-auto max-w-5xl px-6">
+          <div className="mb-14 text-center">
+            <h2 className="text-3xl font-extrabold text-gray-900">Alles wat je nodig hebt</h2>
+            <p className="mt-3 text-lg text-gray-500">
+              Van eerste WhatsApp-bericht tot gekwalificeerde lead in je CRM — volledig automatisch.
+            </p>
+          </div>
+
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {[
+              {
+                icon: MessageSquare,
+                color: 'bg-indigo-100 text-indigo-600',
+                title: 'WhatsApp AI-receptionist',
+                desc: 'Beantwoordt klanten automatisch in jouw naam, 24/7, in het Nederlands. Nooit een lead missen.',
+              },
+              {
+                icon: Bot,
+                color: 'bg-violet-100 text-violet-600',
+                title: 'Sector-slimme prompts',
+                desc: 'Specifieke AI-configuraties voor installateurs, makelaars, garages, kinesisten en meer.',
+              },
+              {
+                icon: Database,
+                color: 'bg-blue-100 text-blue-600',
+                title: 'Automatische CRM sync',
+                desc: 'Elke lead wordt automatisch doorgestuurd naar Airtable, compleet met naam, adres en type werk.',
+              },
+              {
+                icon: Users,
+                color: 'bg-amber-100 text-amber-600',
+                title: 'Agency dashboard',
+                desc: 'Beheer meerdere klanten vanuit één overzicht. Onboarding wizard inbegrepen.',
+              },
+              {
+                icon: Clock,
+                color: 'bg-green-100 text-green-600',
+                title: 'Afspraken module',
+                desc: 'De AI plant automatisch afspraken in en toont ze gegroepeerd in je agenda.',
+              },
+              {
+                icon: TrendingUp,
+                color: 'bg-rose-100 text-rose-600',
+                title: 'Live statistieken',
+                desc: 'Bekijk hoeveel gesprekken, leads en CRM-syncs er vandaag zijn — in real time.',
+              },
+            ].map(feature => (
+              <div
+                key={feature.title}
+                className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
+              >
+                <div className={`mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl ${feature.color}`}>
+                  <feature.icon className="h-5 w-5" />
+                </div>
+                <h3 className="mb-2 font-semibold text-gray-900">{feature.title}</h3>
+                <p className="text-sm leading-relaxed text-gray-500">{feature.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Hoe het werkt ─────────────────────────────────────────────────── */}
+      <section id="hoe-werkt-het" className="bg-gray-50 py-24">
+        <div className="mx-auto max-w-4xl px-6">
+          <div className="mb-14 text-center">
+            <h2 className="text-3xl font-extrabold text-gray-900">In 3 stappen live</h2>
+            <p className="mt-3 text-lg text-gray-500">
+              Geen technische kennis vereist. Van aanmelden tot eerste AI-gesprek in minder dan 10 minuten.
+            </p>
+          </div>
+
+          <div className="relative">
+            {/* Verbindingslijn */}
+            <div className="absolute left-6 top-8 hidden h-[calc(100%-4rem)] w-px bg-indigo-100 sm:block" />
+
+            <div className="space-y-8">
+              {[
+                {
+                  step: '01',
+                  title: 'Verbind je WhatsApp nummer',
+                  desc: 'Koppel je Meta / WhatsApp Business nummer aan Repto via de onboarding wizard. Klaar in 2 minuten.',
+                  badge: 'WhatsApp Business',
+                },
+                {
+                  step: '02',
+                  title: 'Configureer de AI-receptionist',
+                  desc: 'Kies je sector, communicatiestijl en voeg extra bedrijfsinformatie toe. De AI past zich automatisch aan.',
+                  badge: 'AI configuratie',
+                },
+                {
+                  step: '03',
+                  title: 'Ontvang leads in je CRM',
+                  desc: 'Zodra een klant via WhatsApp contact opneemt, verwerkt de AI het gesprek en stuurt een gekwalificeerde lead naar Airtable.',
+                  badge: 'Airtable sync',
+                },
+              ].map((item, i) => (
+                <div key={i} className="relative flex gap-6 sm:items-start">
+                  <div className="relative z-10 flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-4 border-white bg-indigo-600 text-sm font-bold text-white shadow-md">
+                    {item.step}
+                  </div>
+                  <div className="flex-1 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+                    <div className="mb-1 flex items-center gap-2">
+                      <h3 className="font-semibold text-gray-900">{item.title}</h3>
+                      <span className="rounded-full bg-indigo-50 px-2.5 py-0.5 text-[10px] font-semibold text-indigo-600">
+                        {item.badge}
+                      </span>
+                    </div>
+                    <p className="text-sm leading-relaxed text-gray-500">{item.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Prijzen ───────────────────────────────────────────────────────── */}
+      <section id="prijzen" className="py-24">
+        <div className="mx-auto max-w-5xl px-6">
+          <div className="mb-14 text-center">
+            <h2 className="text-3xl font-extrabold text-gray-900">Eenvoudige prijzen</h2>
+            <p className="mt-3 text-lg text-gray-500">
+              Geen vaste contracten. Geen verborgen kosten. Opzeggen wanneer je wil.
+            </p>
+          </div>
+
+          <div className="grid gap-6 sm:grid-cols-3">
+            {[
+              {
+                name: 'Starter',
+                price: 49,
+                desc: 'Ideaal voor één klant',
+                features: ['1 klant-organisatie', '200 gesprekken/maand', 'Airtable CRM', 'E-mail support'],
+                popular: false,
+              },
+              {
+                name: 'Groei',
+                price: 99,
+                desc: 'Meest gekozen',
+                features: ['5 klant-organisaties', '500 gesprekken/maand', 'Airtable CRM', 'Afspraken module', 'Prioriteit support'],
+                popular: true,
+              },
+              {
+                name: 'Agency',
+                price: 199,
+                desc: 'Voor snelgroeiende agencies',
+                features: ['Onbeperkt klanten', 'Onbeperkt gesprekken', 'Airtable + HubSpot', 'Dedicated support', 'White-label'],
+                popular: false,
+              },
+            ].map(plan => (
+              <div
+                key={plan.name}
+                className={`relative flex flex-col rounded-2xl p-6 shadow-sm ${
+                  plan.popular
+                    ? 'border-2 border-indigo-600 bg-white ring-4 ring-indigo-50'
+                    : 'border border-gray-200 bg-white'
+                }`}
+              >
+                {plan.popular && (
+                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
+                    <span className="rounded-full bg-indigo-600 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-white">
+                      Meest gekozen
+                    </span>
+                  </div>
+                )}
+                <h3 className="text-lg font-bold text-gray-900">{plan.name}</h3>
+                <p className="mt-0.5 text-sm text-gray-500">{plan.desc}</p>
+                <div className="mt-4 flex items-baseline gap-1">
+                  <span className="text-4xl font-extrabold text-gray-900">€{plan.price}</span>
+                  <span className="text-sm text-gray-400">/maand</span>
+                </div>
+                <ul className="my-6 flex-1 space-y-2.5">
+                  {plan.features.map(f => (
+                    <li key={f} className="flex items-start gap-2 text-sm text-gray-700">
+                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-indigo-600" />
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+                <Link
+                  href="/sign-in"
+                  className={`w-full rounded-xl py-3 text-center text-sm font-semibold transition-colors ${
+                    plan.popular
+                      ? 'bg-indigo-600 text-white hover:bg-indigo-700'
+                      : 'border border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  Starten
+                </Link>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Final CTA ─────────────────────────────────────────────────────── */}
+      <section className="bg-indigo-600 py-20">
+        <div className="mx-auto max-w-3xl px-6 text-center">
+          <h2 className="text-3xl font-extrabold text-white">
+            Klaar om meer leads te vangen?
+          </h2>
+          <p className="mt-4 text-lg text-indigo-200">
+            Maak gratis een account aan en verbind je eerste klant in minder dan 5 minuten.
+          </p>
+          <Link
+            href="/sign-in"
+            className="mt-8 inline-flex items-center gap-2 rounded-xl bg-white px-8 py-4 text-base font-semibold text-indigo-600 shadow-lg hover:bg-indigo-50 transition-colors"
+          >
+            Gratis starten <ArrowRight className="h-5 w-5" />
+          </Link>
+          <p className="mt-4 text-sm text-indigo-300">
+            ✓ Geen creditcard &nbsp;·&nbsp; ✓ Klaar in 5 min &nbsp;·&nbsp; ✓ Gratis proefperiode
+          </p>
+        </div>
+      </section>
+
+      {/* ── Footer ────────────────────────────────────────────────────────── */}
+      <footer className="border-t border-gray-100 bg-white py-10">
+        <div className="mx-auto max-w-5xl px-6">
+          <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-600">
+                <Zap className="h-3.5 w-3.5 text-white" />
+              </div>
+              <span className="font-bold text-gray-900">Repto</span>
+              <span className="text-sm text-gray-400">— AI-receptionist voor KMO's</span>
+            </div>
+            <div className="flex items-center gap-6 text-sm text-gray-400">
+              <Link href="/sign-in" className="hover:text-gray-700">Aanmelden</Link>
+              <a href="#prijzen" className="hover:text-gray-700">Prijzen</a>
+              <span>© 2025 Repto</span>
+            </div>
+          </div>
+        </div>
+      </footer>
+
+    </div>
+  )
+}

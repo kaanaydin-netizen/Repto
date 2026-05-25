@@ -45,7 +45,7 @@ export default async function KlantDetailPage({ params }: { params: Promise<{ id
   const org = await api.organizations.get(id).catch(() => null)
   if (!org) notFound()
 
-  const webhookUrl = `${process.env.NEXT_PUBLIC_API_URL || 'https://repto-production.up.railway.app'}/webhooks/whatsapp/${org.id}`
+  const webhookUrl = `${process.env.NEXT_PUBLIC_API_URL || 'https://repto-production.up.railway.app'}/webhooks/whatsapp`
 
   return (
     <div className="p-8 max-w-2xl">
