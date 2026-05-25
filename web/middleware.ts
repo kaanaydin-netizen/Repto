@@ -1,22 +1,8 @@
-import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
-import { NextResponse } from 'next/server'
+import { clerkMiddleware } from '@clerk/nextjs/server'
 
-const isPublicRoute = createRouteMatcher([
-  '/sign-in(.*)',
-  '/sign-up(.*)',
-])
-
-export default clerkMiddleware(
-  async (auth, request) => {
-    if (!isPublicRoute(request)) {
-      await auth.protect()
-    }
-  },
-  {
-    publishableKey: process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
-    secretKey: process.env.CLERK_SECRET_KEY,
-  }
-)
+// Minimale middleware — alleen Clerk auth-context koppelen aan requests.
+// Route-bescherming gebeurt in app/(app)/layout.tsx (Node.js runtime).
+export default clerkMiddleware()
 
 export const config = {
   matcher: [
