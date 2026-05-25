@@ -33,6 +33,8 @@ class Settings(BaseSettings):
 
     # Email (Resend) — optioneel fase 2
     resend_api_key: Optional[str] = None
+    notification_email: Optional[str] = None     # E-mailadres voor lead-notificaties
+    notification_from: str = "Repto <noreply@repto.be>"  # Afzender (na domeinverificatie in Resend)
 
     # Google Sheets — service account (compact JSON string)
     google_sheets_credentials_b64: Optional[str] = None  # legacy

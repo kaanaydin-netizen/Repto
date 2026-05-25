@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.services.whatsapp_service import WhatsAppService
 from app.services.ai_service import AIService
+from app.services.email_service import send_lead_notification
 
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 
@@ -105,6 +106,9 @@ async def process_incoming_message(
             conversation.status = "closed"
             await db.commit()
             await db.refresh(conversation)
+
+            # E-mailnotificatie sturen naar agency (faalt stil als niet geconfigureerd)
+            await send_lead_notification(conversation=conversation, db=db)
 
         # Antwoord versturen via Twilio (altijd zonder de interne tag)
         await wa_service.send_message(
