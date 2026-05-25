@@ -4,6 +4,7 @@ Organizations API — aanmaken en beheren van klant-organisaties.
 from __future__ import annotations
 import json
 import uuid
+from datetime import datetime
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict
@@ -56,7 +57,7 @@ class OrganizationOut(BaseModel):
     whatsapp_number: Optional[str]
     whatsapp_phone_number_id: Optional[str]
     crm_type: str
-    created_at: Optional[str] = None
+    created_at: Optional[datetime] = None
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
