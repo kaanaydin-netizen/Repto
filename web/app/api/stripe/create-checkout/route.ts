@@ -69,7 +69,11 @@ export async function POST(request: NextRequest) {
       success_url: `${origin}/billing?success=true&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/billing?cancelled=true`,
       metadata: { clerk_user_id: userId, plan },
-      subscription_data: { metadata: { clerk_user_id: userId, plan } },
+      subscription_data: {
+        metadata: { clerk_user_id: userId, plan },
+        trial_period_days: 7,
+      },
+      payment_method_collection: 'always',   // creditcard verplicht ook bij trial
       allow_promotion_codes: true,
       locale: 'nl',
     })

@@ -28,7 +28,7 @@ export default function BillingClient({ meta, successParam, cancelledParam }: Pr
   const [error, setError] = useState('')
   const [notification, setNotification] = useState(
     successParam
-      ? '🎉 Betaling geslaagd! Welkom bij Repto. Je abonnement is actief.'
+      ? '🎉 Welkom bij Repto! Je 7-daagse gratis proefperiode is gestart. Je wordt pas gefactureerd na dag 7.'
       : cancelledParam
       ? ''
       : ''
@@ -168,6 +168,11 @@ export default function BillingClient({ meta, successParam, cancelledParam }: Pr
               {/* Plan naam & prijs */}
               <div className="mb-5">
                 <h3 className="text-lg font-bold text-gray-900">{plan.name}</h3>
+                {!hasActiveSubscription && (
+                  <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-semibold text-green-700 ring-1 ring-green-200">
+                    ✨ 7 dagen gratis proberen
+                  </div>
+                )}
                 <div className="mt-2 flex items-baseline gap-1">
                   <span className="text-4xl font-extrabold text-gray-900">€{plan.price}</span>
                   <span className="text-sm text-gray-500">/maand</span>
@@ -199,21 +204,28 @@ export default function BillingClient({ meta, successParam, cancelledParam }: Pr
                   {loading === 'portal' ? 'Laden…' : 'Abonnement beheren'}
                 </button>
               ) : (
-                <button
-                  onClick={() => handleCheckout(planKey)}
-                  disabled={loading !== null}
-                  className={`w-full rounded-xl py-3 text-sm font-semibold text-white transition-colors disabled:opacity-60 ${
-                    isPopular
-                      ? 'bg-indigo-600 hover:bg-indigo-700'
-                      : 'bg-gray-800 hover:bg-gray-900'
-                  }`}
-                >
-                  {loading === planKey
-                    ? 'Laden…'
-                    : hasActiveSubscription
-                    ? 'Overstappen'
-                    : 'Abonneren'}
-                </button>
+                <div>
+                  <button
+                    onClick={() => handleCheckout(planKey)}
+                    disabled={loading !== null}
+                    className={`w-full rounded-xl py-3 text-sm font-semibold text-white transition-colors disabled:opacity-60 ${
+                      isPopular
+                        ? 'bg-indigo-600 hover:bg-indigo-700'
+                        : 'bg-gray-800 hover:bg-gray-900'
+                    }`}
+                  >
+                    {loading === planKey
+                      ? 'Laden…'
+                      : hasActiveSubscription
+                      ? 'Overstappen'
+                      : '7 dagen gratis starten →'}
+                  </button>
+                  {!hasActiveSubscription && (
+                    <p className="mt-2 text-center text-[11px] text-gray-400">
+                      Creditcard vereist · daarna €{plan.price}/maand
+                    </p>
+                  )}
+                </div>
               )}
             </div>
           )
@@ -232,7 +244,7 @@ export default function BillingClient({ meta, successParam, cancelledParam }: Pr
           >
             Stripe
           </a>
-          {' '}· 30 dagen niet-goed-geld-terug garantie · Opzeggen wanneer je wil
+          {' '}· 7 dagen gratis trial · Daarna automatisch verlengd · Opzeggen wanneer je wil
         </p>
       </div>
     </div>

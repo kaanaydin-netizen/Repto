@@ -392,7 +392,10 @@ export default async function HomePage() {
                 )}
                 <h3 className="text-lg font-bold text-gray-900">{plan.name}</h3>
                 <p className="mt-0.5 text-sm text-gray-500">{plan.desc}</p>
-                <div className="mt-4 flex items-baseline gap-1">
+                <div className="mt-3 inline-flex items-center gap-1 rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-semibold text-green-700 ring-1 ring-green-200">
+                  ✨ 7 dagen gratis proberen
+                </div>
+                <div className="mt-3 flex items-baseline gap-1">
                   <span className="text-4xl font-extrabold text-gray-900">€{plan.price}</span>
                   <span className="text-sm text-gray-400">/maand</span>
                 </div>
@@ -412,8 +415,11 @@ export default async function HomePage() {
                       : 'border border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
                   }`}
                 >
-                  Starten
+                  7 dagen gratis starten →
                 </Link>
+                <p className="mt-2 text-center text-[11px] text-gray-400">
+                  Creditcard vereist · daarna €{plan.price}/maand
+                </p>
               </div>
             ))}
           </div>
