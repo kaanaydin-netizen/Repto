@@ -1,12 +1,13 @@
-import { clerkMiddleware } from '@clerk/nextjs/server'
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
 
-// Minimale middleware — alleen Clerk auth-context koppelen aan requests.
-// Route-bescherming gebeurt in app/(app)/layout.tsx (Node.js runtime).
-export default clerkMiddleware()
+// Tijdelijk: pass-through om Clerk Edge-probleem te isoleren
+export function middleware(request: NextRequest) {
+  return NextResponse.next()
+}
 
 export const config = {
   matcher: [
     '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
-    '/(api|trpc)(.*)',
   ],
 }
