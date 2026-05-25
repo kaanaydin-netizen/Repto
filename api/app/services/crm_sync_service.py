@@ -177,7 +177,6 @@ class CrmSyncService:
             .order_by(Message.sent_at.asc())
         )
         all_messages = list(msgs_result.scalars().all())
-        first_inbound = next((m for m in all_messages if m.direction == "inbound"), None)
 
         # Lead-data extraheren via Claude Haiku
         lead = await self._extract_lead_data(all_messages)
@@ -199,7 +198,6 @@ class CrmSyncService:
             "Gewenste Datum": lead.get("gewenste_datum") or "",
             "Urgentie": lead.get("urgentie") or "",
             "Status": STATUS_MAP.get(conversation.status, "Todo"),
-            "Eerste Bericht": (first_inbound.content[:500] if first_inbound else ""),
         }
 
         base_url = f"{AIRTABLE_API_URL}/{base_id}/{table_name}"
