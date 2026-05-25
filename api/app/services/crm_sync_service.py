@@ -1,17 +1,19 @@
 """
-CRM Sync Service — synchroniseert nieuwe leads naar:
-  MVP:    Google Sheets via Apps Script webhook (9 kolommen)
-  Fase 2: HubSpot, Pipedrive
-v0.3: Lead-extractie via Claude Haiku + 9-kolommen sync
+CRM Sync Service — synchroniseert leads rechtstreeks naar Google Sheets
+via de Google Sheets API (service account). Geen webhook, geen redirect.
+v0.3: Lead-extractie via Claude Haiku + 9-kolommen directe API write
 """
 from __future__ import annotations
+import asyncio
+import base64
 import json
 import logging
 import uuid
 from datetime import datetime
 
 import anthropic
-import httpx
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -22,6 +24,21 @@ settings = get_settings()
 logger = logging.getLogger(__name__)
 
 EXTRACTION_MODEL = "claude-haiku-4-5-20251001"
+SHEETS_SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
+SHEET_TAB = "Repto Leads"
+
+
+def _get_sheets_service():
+    """Bouw een Google Sheets API service op via de service account credentials."""
+    creds_b64 = settings.google_sheets_credentials_b64
+    if not creds_b64:
+        raise ValueError("GOOGLE_SHEETS_CREDENTIALS_B64 env var niet ingesteld")
+
+    creds_json = json.loads(base64.b64decode(creds_b64).decode())
+    credentials = service_account.Credentials.from_service_account_info(
+        creds_json, scopes=SHEETS_SCOPES
+    )
+    return build("sheets", "v4", credentials=credentials, cache_discovery=False)
 
 
 class CrmSyncService:
@@ -50,7 +67,7 @@ class CrmSyncService:
             )
             self.db.add(log)
             await self.db.commit()
-            print(f"✅ CRM sync geslaagd: {conversation.wa_contact_phone} → {org.crm_type}")
+            logger.info(f"✅ CRM sync: {conversation.wa_contact_phone} → {org.crm_type}")
 
         except Exception as e:
             log = CrmSyncLog(
@@ -62,13 +79,12 @@ class CrmSyncService:
             )
             self.db.add(log)
             await self.db.commit()
-            print(f"❌ CRM sync mislukt voor gesprek {conversation.id}: {e}")
+            logger.error(f"❌ CRM sync mislukt voor gesprek {conversation.id}: {e}")
 
     async def _extract_lead_data(self, messages: list[Message]) -> dict:
         """
         Tweede Claude-aanroep (Haiku) om gestructureerde lead-data
         te extraheren uit de conversatiehistoriek.
-        Retourneert: {naam, adres, type_werk, gewenste_datum, urgentie}
         """
         conversation_text = "\n".join(
             f"{m.direction}: {m.content}"
@@ -77,7 +93,6 @@ class CrmSyncService:
         )
 
         if not conversation_text.strip():
-            logger.warning("_extract_lead_data: leeg gesprek")
             return _empty_lead()
 
         try:
@@ -114,68 +129,62 @@ class CrmSyncService:
                 "urgentie": _normalize_urgentie(data.get("urgentie")),
             }
 
-        except json.JSONDecodeError as e:
-            logger.error(f"_extract_lead_data: JSON parse fout: {e}")
-            return _empty_lead()
         except Exception as e:
-            logger.error(f"_extract_lead_data: fout: {e}")
+            logger.error(f"_extract_lead_data fout: {e}")
             return _empty_lead()
 
     async def _sync_google_sheets(
         self, conversation: Conversation, org: Organization
     ) -> str:
         """
-        Voeg een nieuwe lead toe aan Google Sheets via Apps Script webhook.
-        9 kolommen: datum, naam, telefoon, adres, type_werk, gewenste_datum,
-                    urgentie, status, eerste_bericht
+        Schrijf een nieuwe lead-rij rechtstreeks naar Google Sheets
+        via de Sheets API (service account). Geen webhook nodig.
+        9 kolommen: Datum | Naam | Telefoon | Adres | Type Werk |
+                    Gewenste Datum | Urgentie | Status | Eerste Bericht
         """
         if not org.crm_credentials_encrypted:
-            raise ValueError("Google Sheets webhook URL niet geconfigureerd")
+            raise ValueError("crm_credentials_encrypted niet geconfigureerd")
 
         config = json.loads(org.crm_credentials_encrypted)
-        webhook_url = config.get("webhook_url")
-        if not webhook_url:
-            raise ValueError("webhook_url ontbreekt in crm_credentials_encrypted")
+        spreadsheet_id = config.get("spreadsheet_id")
+        if not spreadsheet_id:
+            raise ValueError("spreadsheet_id ontbreekt in crm_credentials_encrypted")
 
-        # Alle berichten ophalen voor extractie
+        # Alle berichten ophalen
         msgs_result = await self.db.execute(
             select(Message)
             .where(Message.conversation_id == conversation.id)
             .order_by(Message.sent_at.asc())
         )
-        all_messages = msgs_result.scalars().all()
-
-        # Eerste inkomend bericht
-        first_message = next(
-            (m for m in all_messages if m.direction == "inbound"), None
-        )
+        all_messages = list(msgs_result.scalars().all())
+        first_inbound = next((m for m in all_messages if m.direction == "inbound"), None)
 
         # Lead-data extraheren via Claude Haiku
-        lead = await self._extract_lead_data(list(all_messages))
+        lead = await self._extract_lead_data(all_messages)
 
-        payload = {
-            "datum": datetime.now().strftime("%d/%m/%Y %H:%M"),
-            "naam": lead.get("naam") or conversation.wa_contact_name or "Onbekend",
-            "telefoon": conversation.wa_contact_phone,
-            "adres": lead.get("adres") or "",
-            "type_werk": lead.get("type_werk") or "",
-            "gewenste_datum": lead.get("gewenste_datum") or "",
-            "urgentie": lead.get("urgentie") or "",
-            "status": conversation.status,
-            "eerste_bericht": (first_message.content[:300] if first_message else ""),
-        }
+        row = [
+            datetime.now().strftime("%d/%m/%Y %H:%M"),
+            lead.get("naam") or conversation.wa_contact_name or "Onbekend",
+            conversation.wa_contact_phone,
+            lead.get("adres") or "",
+            lead.get("type_werk") or "",
+            lead.get("gewenste_datum") or "",
+            lead.get("urgentie") or "",
+            conversation.status,
+            (first_inbound.content[:300] if first_inbound else ""),
+        ]
 
-        # POST naar de Apps Script webhook
-        # Google Apps Script stuurt 302 redirect → httpx converteert POST→GET (correct gedrag)
-        async with httpx.AsyncClient(follow_redirects=True, timeout=15.0) as client:
-            response = await client.post(
-                webhook_url,
-                content=json.dumps(payload).encode(),
-                headers={"Content-Type": "application/json"},
-            )
-            response.raise_for_status()
+        # Schrijf naar Sheets in een thread (synchrone API)
+        await asyncio.to_thread(
+            _append_row_to_sheet,
+            spreadsheet_id=spreadsheet_id,
+            tab_name=SHEET_TAB,
+            row=row,
+        )
 
-        print(f"📊 Sheets sync: {payload['naam']} | urgentie={payload['urgentie']} | werk={payload['type_werk']}")
+        logger.info(
+            f"📊 Sheets: {row[1]} | {lead.get('type_werk')} | urgentie={lead.get('urgentie')}"
+        )
         return f"sheets_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
     async def _sync_hubspot(self, conversation: Conversation, org: Organization) -> str:
@@ -185,16 +194,22 @@ class CrmSyncService:
         raise NotImplementedError("Pipedrive integratie is gepland voor fase 2")
 
 
+def _append_row_to_sheet(spreadsheet_id: str, tab_name: str, row: list) -> None:
+    """Synchrone helper — voer uit in thread via asyncio.to_thread()."""
+    service = _get_sheets_service()
+    service.spreadsheets().values().append(
+        spreadsheetId=spreadsheet_id,
+        range=f"{tab_name}!A:I",
+        valueInputOption="USER_ENTERED",
+        body={"values": [row]},
+    ).execute()
+
+
 # ─── Hulpfuncties ─────────────────────────────────────────────────────────────
 
 def _empty_lead() -> dict:
-    return {
-        "naam": None,
-        "adres": None,
-        "type_werk": None,
-        "gewenste_datum": None,
-        "urgentie": None,
-    }
+    return {"naam": None, "adres": None, "type_werk": None,
+            "gewenste_datum": None, "urgentie": None}
 
 
 def _str_or_none(val) -> str | None:

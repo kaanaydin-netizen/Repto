@@ -34,7 +34,10 @@ class Settings(BaseSettings):
     # Email (Resend) — optioneel fase 2
     resend_api_key: Optional[str] = None
 
-    # Google (Sheets + Calendar) — optioneel fase 2
+    # Google Sheets — service account (base64-encoded JSON)
+    google_sheets_credentials_b64: Optional[str] = None
+
+    # Google (Calendar OAuth) — optioneel fase 2
     google_client_id: Optional[str] = None
     google_client_secret: Optional[str] = None
 
