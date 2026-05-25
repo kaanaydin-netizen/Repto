@@ -8,12 +8,14 @@ import {
   Calendar,
   Settings,
   Zap,
+  Building2,
 } from 'lucide-react'
 
 const nav = [
   { href: '/dashboard',    label: 'Dashboard',    icon: LayoutDashboard },
   { href: '/gesprekken',   label: 'Gesprekken',   icon: MessageSquare },
   { href: '/afspraken',    label: 'Afspraken',    icon: Calendar },
+  { href: '/klanten',      label: 'Klanten',      icon: Building2 },
   { href: '/instellingen', label: 'Instellingen', icon: Settings },
 ]
 

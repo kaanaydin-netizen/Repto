@@ -1,4 +1,4 @@
-import type { Conversation, Message, DashboardStats } from './types'
+import type { Conversation, Message, DashboardStats, Organization, OrganizationCreate } from './types'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 export const ORG_ID = process.env.NEXT_PUBLIC_ORG_ID || ''
@@ -39,4 +39,24 @@ export const api = {
 
   stats: (orgId: string) =>
     fetcher<DashboardStats>(`/conversations/stats?org_id=${orgId}`),
+
+  organizations: {
+    list: () =>
+      fetcher<Organization[]>(`/organizations/`),
+
+    get: (id: string) =>
+      fetcher<Organization>(`/organizations/${id}`),
+
+    create: (data: OrganizationCreate) =>
+      fetcher<Organization>(`/organizations/`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+
+    update: (id: string, data: Partial<OrganizationCreate>) =>
+      fetcher<Organization>(`/organizations/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+  },
 }

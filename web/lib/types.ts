@@ -38,3 +38,30 @@ export interface DashboardStats {
   closed_today: number
   crm_synced: number
 }
+
+export interface Organization {
+  id: string
+  name: string
+  sector: string | null
+  ai_tone: string
+  ai_system_prompt: string | null
+  whatsapp_number: string | null
+  whatsapp_phone_number_id: string | null
+  crm_type: string
+  created_at: string | null
+}
+
+export interface OrganizationCreate {
+  name: string
+  sector?: string
+  ai_tone?: string
+  ai_system_prompt?: string
+  whatsapp_number?: string
+  whatsapp_phone_number_id?: string
+  crm_type?: string
+  airtable?: {
+    api_key: string
+    base_id: string
+    table_name?: string
+  }
+}

@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import get_settings
-from app.routers import webhooks, conversations
+from app.routers import webhooks, conversations, organizations
 
 settings = get_settings()
 
@@ -23,6 +23,7 @@ app.add_middleware(
 # Routers
 app.include_router(webhooks.router)
 app.include_router(conversations.router)
+app.include_router(organizations.router)
 
 
 @app.get("/")
