@@ -5,6 +5,7 @@
   "env": {
     "NEXT_PUBLIC_API_URL": "https://repto-production.up.railway.app",
     "NEXT_PUBLIC_ORG_ID": "b4c28832-a365-4f99-a4dc-b25a8ea7da3a",
+    "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_test_Y3VyaW91cy1vYXJmaXNoLTIzLmNsZXJrLmFjY291bnRzLmRldiQ",
     "NEXT_PUBLIC_CLERK_SIGN_IN_URL": "/sign-in",
     "NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL": "/dashboard"
   }
