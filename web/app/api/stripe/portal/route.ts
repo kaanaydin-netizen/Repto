@@ -1,6 +1,6 @@
 import { auth, clerkClient } from '@clerk/nextjs/server'
 import { NextRequest, NextResponse } from 'next/server'
-import { stripe } from '@/lib/stripe'
+import { getStripe } from '@/lib/stripe'
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,6 +20,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const stripe = getStripe()
     const origin = request.headers.get('origin') ?? 'https://repto-three.vercel.app'
 
     const portalSession = await stripe.billingPortal.sessions.create({
@@ -31,7 +32,7 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     console.error('portal error:', err)
     return NextResponse.json(
-      { error: 'Customer portal openen mislukt.' },
+      { error: err instanceof Error ? err.message : 'Customer portal openen mislukt.' },
       { status: 500 }
     )
   }

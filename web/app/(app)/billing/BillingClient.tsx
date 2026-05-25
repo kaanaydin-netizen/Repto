@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { Check, Zap, ExternalLink, AlertCircle, CreditCard } from 'lucide-react'
-import { PLANS, type PlanKey } from '@/lib/stripe'
+import { PLANS, type PlanKey } from '@/lib/plans'
 import type { StripeMetadata } from './page'
 
 // ─── Hulpfuncties ─────────────────────────────────────────────────────────────

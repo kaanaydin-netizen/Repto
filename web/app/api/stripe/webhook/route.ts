@@ -1,19 +1,17 @@
 import { clerkClient } from '@clerk/nextjs/server'
 import { NextRequest, NextResponse } from 'next/server'
-import { stripe } from '@/lib/stripe'
+import { getStripe } from '@/lib/stripe'
 import type Stripe from 'stripe'
-
-// Next.js mag de body NIET parsen — Stripe heeft de raw bytes nodig
-export const config = { api: { bodyParser: false } }
 
 export async function POST(request: NextRequest) {
   const sig = request.headers.get('stripe-signature')
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
 
   if (!sig || !webhookSecret) {
-    return NextResponse.json({ error: 'Webhook geweigerd' }, { status: 400 })
+    return NextResponse.json({ error: 'Webhook geweigerd — handtekening of secret ontbreekt' }, { status: 400 })
   }
 
+  const stripe = getStripe()
   const rawBody = await request.text()
 
   let event: Stripe.Event
@@ -28,7 +26,8 @@ export async function POST(request: NextRequest) {
 
   try {
     switch (event.type) {
-      // Betaling succesvol — sla plan op in Clerk metadata
+
+      // Betaling geslaagd — activeer abonnement
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session
         const clerkUserId = session.metadata?.clerk_user_id
@@ -50,7 +49,7 @@ export async function POST(request: NextRequest) {
         break
       }
 
-      // Abonnement bijgewerkt (upgrade/downgrade)
+      // Abonnement gewijzigd (upgrade/downgrade/heractivatie)
       case 'customer.subscription.updated': {
         const sub = event.data.object as Stripe.Subscription
         const clerkUserId = sub.metadata?.clerk_user_id
@@ -58,10 +57,11 @@ export async function POST(request: NextRequest) {
 
         if (clerkUserId) {
           const user = await clerk.users.getUser(clerkUserId)
+          const existing = user.privateMetadata as Record<string, unknown>
           await clerk.users.updateUserMetadata(clerkUserId, {
             privateMetadata: {
-              ...(user.privateMetadata as object),
-              stripePlan: plan ?? (user.privateMetadata as Record<string, unknown>).stripePlan,
+              ...existing,
+              stripePlan: plan ?? existing.stripePlan,
               stripeStatus: sub.status,
             },
           })
@@ -92,14 +92,10 @@ export async function POST(request: NextRequest) {
       case 'invoice.payment_failed': {
         const invoice = event.data.object as Stripe.Invoice
         const customerId = invoice.customer as string
-        // Zoek de klant op en update status
-        const customers = await stripe.customers.list({
-          email: undefined,
-          limit: 1,
-        })
-        // Gebruik customer metadata om Clerk user te vinden
+
         const customer = await stripe.customers.retrieve(customerId) as Stripe.Customer
         const clerkUserId = customer.metadata?.clerk_user_id
+
         if (clerkUserId) {
           const user = await clerk.users.getUser(clerkUserId)
           await clerk.users.updateUserMetadata(clerkUserId, {
@@ -113,7 +109,6 @@ export async function POST(request: NextRequest) {
       }
 
       default:
-        // Andere events negeren
         break
     }
   } catch (err) {
