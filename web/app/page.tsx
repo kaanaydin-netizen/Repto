@@ -55,7 +55,7 @@ export default async function HomePage() {
               Aanmelden
             </Link>
             <Link
-              href="/sign-in"
+              href="/sign-up"
               className="flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 transition-colors"
             >
               Aan de slag <ArrowRight className="h-4 w-4" />
@@ -92,10 +92,10 @@ export default async function HomePage() {
           {/* CTA knoppen */}
           <div className="mt-10 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
             <Link
-              href="/sign-in"
+              href="/sign-up"
               className="flex items-center gap-2 rounded-xl bg-indigo-600 px-7 py-3.5 text-base font-semibold text-white shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all hover:scale-105"
             >
-              Gratis proberen <ArrowRight className="h-5 w-5" />
+              7 dagen gratis starten <ArrowRight className="h-5 w-5" />
             </Link>
             <a
               href="#hoe-werkt-het"
@@ -107,7 +107,7 @@ export default async function HomePage() {
 
           {/* Social proof */}
           <p className="mt-8 text-sm text-gray-400">
-            ✓ Geen creditcard vereist &nbsp;·&nbsp; ✓ Klaar in 5 minuten &nbsp;·&nbsp; ✓ Opzeggen wanneer je wil
+            ✓ 7 dagen gratis trial &nbsp;·&nbsp; ✓ Klaar in 5 minuten &nbsp;·&nbsp; ✓ Opzeggen wanneer je wil
           </p>
         </div>
 
@@ -408,7 +408,7 @@ export default async function HomePage() {
                   ))}
                 </ul>
                 <Link
-                  href="/sign-in"
+                  href="/sign-up"
                   className={`w-full rounded-xl py-3 text-center text-sm font-semibold transition-colors ${
                     plan.popular
                       ? 'bg-indigo-600 text-white hover:bg-indigo-700'
@@ -433,16 +433,16 @@ export default async function HomePage() {
             Klaar om meer leads te vangen?
           </h2>
           <p className="mt-4 text-lg text-indigo-200">
-            Maak gratis een account aan en verbind je eerste klant in minder dan 5 minuten.
+            Start vandaag met 7 dagen gratis — verbind je eerste klant in minder dan 5 minuten.
           </p>
           <Link
-            href="/sign-in"
+            href="/sign-up"
             className="mt-8 inline-flex items-center gap-2 rounded-xl bg-white px-8 py-4 text-base font-semibold text-indigo-600 shadow-lg hover:bg-indigo-50 transition-colors"
           >
-            Gratis starten <ArrowRight className="h-5 w-5" />
+            7 dagen gratis starten <ArrowRight className="h-5 w-5" />
           </Link>
           <p className="mt-4 text-sm text-indigo-300">
-            ✓ Geen creditcard &nbsp;·&nbsp; ✓ Klaar in 5 min &nbsp;·&nbsp; ✓ Gratis proefperiode
+            ✓ 7 dagen gratis trial &nbsp;·&nbsp; ✓ Klaar in 5 min &nbsp;·&nbsp; ✓ Opzeggen wanneer je wil
           </p>
         </div>
       </section>
