@@ -13,6 +13,9 @@ import {
   Clock,
   Users,
   TrendingUp,
+  Eye,
+  Shield,
+  Settings2,
 } from 'lucide-react'
 
 // ─── Redirect ingelogde gebruikers ────────────────────────────────────────────
@@ -42,6 +45,7 @@ export default async function HomePage() {
           {/* Links */}
           <nav className="hidden items-center gap-6 text-sm font-medium text-gray-600 sm:flex">
             <a href="#features" className="hover:text-gray-900 transition-colors">Features</a>
+            <a href="#voorbeeld" className="hover:text-gray-900 transition-colors">Voorbeeld</a>
             <a href="#hoe-werkt-het" className="hover:text-gray-900 transition-colors">Hoe het werkt</a>
             <a href="#prijzen" className="hover:text-gray-900 transition-colors">Prijzen</a>
           </nav>
@@ -58,7 +62,7 @@ export default async function HomePage() {
               href="/sign-up"
               className="flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 transition-colors"
             >
-              Aan de slag <ArrowRight className="h-4 w-4" />
+              Gratis starten <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
         </div>
@@ -78,15 +82,15 @@ export default async function HomePage() {
 
           {/* Headline */}
           <h1 className="text-5xl font-extrabold leading-tight tracking-tight text-gray-900 sm:text-6xl">
-            De AI-receptionist<br />
-            <span className="text-indigo-600">die nooit slaapt.</span>
+            Mis geen enkele<br />
+            <span className="text-indigo-600">offerte-aanvraag meer.</span>
           </h1>
 
           {/* Sub */}
           <p className="mx-auto mt-6 max-w-2xl text-xl leading-relaxed text-gray-500">
-            Repto beantwoordt automatisch WhatsApp-berichten van klanten,
-            verzamelt lead-info en synchroniseert naar je CRM —
-            terwijl jij focus hebt op je werk.
+            Repto beantwoordt automatisch WhatsApp-berichten van klanten, verzamelt naam,
+            adres en aanvraagdetails en stuurt alles door naar je CRM —
+            terwijl jij op de werf staat of onderweg bent.
           </p>
 
           {/* CTA knoppen */}
@@ -98,16 +102,16 @@ export default async function HomePage() {
               7 dagen gratis starten <ArrowRight className="h-5 w-5" />
             </Link>
             <a
-              href="#hoe-werkt-het"
+              href="#voorbeeld"
               className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-7 py-3.5 text-base font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
             >
-              Hoe het werkt
+              Bekijk een voorbeeld
             </a>
           </div>
 
-          {/* Social proof */}
+          {/* Social proof — consistent: creditcard + 10 minuten */}
           <p className="mt-8 text-sm text-gray-400">
-            ✓ 7 dagen gratis trial &nbsp;·&nbsp; ✓ Klaar in 5 minuten &nbsp;·&nbsp; ✓ Opzeggen wanneer je wil
+            ✓ 7 dagen gratis &nbsp;·&nbsp; ✓ Creditcard vereist &nbsp;·&nbsp; ✓ Live in 10 minuten
           </p>
         </div>
 
@@ -158,14 +162,14 @@ export default async function HomePage() {
                 {/* Stat cards */}
                 <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
                   {[
-                    { label: 'Gesprekken', value: '48', color: 'bg-indigo-50 text-indigo-700' },
-                    { label: 'Nieuwe leads', value: '12', color: 'bg-amber-50 text-amber-700' },
-                    { label: 'Gesloten', value: '7', color: 'bg-green-50 text-green-700' },
-                    { label: 'CRM sync', value: '35', color: 'bg-blue-50 text-blue-700' },
+                    { label: 'Gesprekken', value: '48', color: 'text-indigo-700' },
+                    { label: 'Nieuwe leads', value: '12', color: 'text-amber-700' },
+                    { label: 'Gesloten', value: '7', color: 'text-green-700' },
+                    { label: 'CRM sync', value: '35', color: 'text-blue-700' },
                   ].map(stat => (
                     <div key={stat.label} className="rounded-xl border border-gray-100 bg-gray-50 p-3">
                       <p className="text-xs text-gray-400">{stat.label}</p>
-                      <p className={`mt-1 text-2xl font-bold ${stat.color.split(' ')[1]}`}>{stat.value}</p>
+                      <p className={`mt-1 text-2xl font-bold ${stat.color}`}>{stat.value}</p>
                     </div>
                   ))}
                 </div>
@@ -208,7 +212,7 @@ export default async function HomePage() {
         <div className="mx-auto max-w-5xl px-6">
           <div className="grid grid-cols-2 gap-8 text-center sm:grid-cols-4">
             {[
-              { value: '24/7', label: 'Beschikbaar' },
+              { value: '24/7', label: 'Bereikbaar' },
               { value: '< 5s', label: 'Reactietijd' },
               { value: '9+', label: 'Sectoren' },
               { value: '100%', label: 'Automatisch' },
@@ -286,8 +290,229 @@ export default async function HomePage() {
         </div>
       </section>
 
+      {/* ── Praktijkvoorbeeld ─────────────────────────────────────────────── */}
+      <section id="voorbeeld" className="bg-gray-50 py-24">
+        <div className="mx-auto max-w-5xl px-6">
+          <div className="mb-14 text-center">
+            <h2 className="text-3xl font-extrabold text-gray-900">Zo werkt het in de praktijk</h2>
+            <p className="mt-3 text-lg text-gray-500">
+              Een loodgieter ontvangt om 21:43 een WhatsApp. Repto handelt het volledig af.
+            </p>
+          </div>
+
+          <div className="mx-auto max-w-lg">
+            {/* WhatsApp chat mockup */}
+            <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-lg">
+              {/* Chat header */}
+              <div className="flex items-center gap-3 bg-[#075E54] px-4 py-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-green-300 text-sm font-bold text-green-900">
+                  LB
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-white">Loodgieter Baert</p>
+                  <p className="text-xs text-green-200">via Repto AI · online</p>
+                </div>
+              </div>
+
+              {/* Berichten */}
+              <div className="space-y-3 bg-[#ECE5DD] p-4">
+
+                {/* Tijdstip */}
+                <div className="text-center">
+                  <span className="rounded-full bg-white/60 px-3 py-0.5 text-[10px] text-gray-500">
+                    Vandaag 21:43
+                  </span>
+                </div>
+
+                {/* Klant */}
+                <div className="flex justify-end">
+                  <div className="max-w-[75%] rounded-2xl rounded-tr-sm bg-[#DCF8C6] px-3.5 py-2 shadow-sm">
+                    <p className="text-sm text-gray-800">Goedenavond, ik heb een lek in mijn badkamer. Kunnen jullie morgen langskomen?</p>
+                    <p className="mt-1 text-right text-[10px] text-gray-400">21:43 ✓✓</p>
+                  </div>
+                </div>
+
+                {/* Repto */}
+                <div className="flex justify-start">
+                  <div className="max-w-[75%] rounded-2xl rounded-tl-sm bg-white px-3.5 py-2 shadow-sm">
+                    <p className="text-[10px] font-semibold text-indigo-600 mb-1">⚡ Repto AI</p>
+                    <p className="text-sm text-gray-800">Goedenavond! Dat lossen we snel op. Mag ik uw naam en adres vragen zodat we alles kunnen inplannen?</p>
+                    <p className="mt-1 text-right text-[10px] text-gray-400">21:43</p>
+                  </div>
+                </div>
+
+                {/* Klant */}
+                <div className="flex justify-end">
+                  <div className="max-w-[75%] rounded-2xl rounded-tr-sm bg-[#DCF8C6] px-3.5 py-2 shadow-sm">
+                    <p className="text-sm text-gray-800">Thomas De Smedt, Kerkstraat 14, Gent</p>
+                    <p className="mt-1 text-right text-[10px] text-gray-400">21:44 ✓✓</p>
+                  </div>
+                </div>
+
+                {/* Repto */}
+                <div className="flex justify-start">
+                  <div className="max-w-[75%] rounded-2xl rounded-tl-sm bg-white px-3.5 py-2 shadow-sm">
+                    <p className="text-[10px] font-semibold text-indigo-600 mb-1">⚡ Repto AI</p>
+                    <p className="text-sm text-gray-800">Bedankt Thomas! Is er sprake van wateroverlast of is het een klein lek? En bent u morgen de hele dag beschikbaar?</p>
+                    <p className="mt-1 text-right text-[10px] text-gray-400">21:44</p>
+                  </div>
+                </div>
+
+                {/* Klant */}
+                <div className="flex justify-end">
+                  <div className="max-w-[75%] rounded-2xl rounded-tr-sm bg-[#DCF8C6] px-3.5 py-2 shadow-sm">
+                    <p className="text-sm text-gray-800">Klein lek onder de wastafel. Ja morgen ben ik thuis.</p>
+                    <p className="mt-1 text-right text-[10px] text-gray-400">21:45 ✓✓</p>
+                  </div>
+                </div>
+
+                {/* Repto */}
+                <div className="flex justify-start">
+                  <div className="max-w-[75%] rounded-2xl rounded-tl-sm bg-white px-3.5 py-2 shadow-sm">
+                    <p className="text-[10px] font-semibold text-indigo-600 mb-1">⚡ Repto AI</p>
+                    <p className="text-sm text-gray-800">Perfect! Ik heb alles genoteerd. We nemen morgenochtend contact op om een exact tijdstip af te spreken. Tot morgen! 👍</p>
+                    <p className="mt-1 text-right text-[10px] text-gray-400">21:45</p>
+                  </div>
+                </div>
+
+                {/* CRM sync notificatie */}
+                <div className="flex items-center gap-2 rounded-xl border border-green-200 bg-green-50 px-3 py-2.5">
+                  <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-500">
+                    <Check className="h-3.5 w-3.5 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-green-800">Lead doorgestuurd naar Airtable ✓</p>
+                    <p className="text-[10px] text-green-600">Thomas De Smedt · Kerkstraat 14, Gent · Lek badkamer</p>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            <p className="mt-4 text-center text-sm text-gray-400">
+              Terwijl jij sliep, heeft Repto de lead volledig verzameld en opgeslagen.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Jij houdt altijd controle ─────────────────────────────────────── */}
+      <section className="py-24">
+        <div className="mx-auto max-w-5xl px-6">
+          <div className="grid gap-12 lg:grid-cols-2 lg:items-center">
+            <div>
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">
+                <Shield className="h-3.5 w-3.5" /> Jij blijft altijd de baas
+              </div>
+              <h2 className="text-3xl font-extrabold text-gray-900">
+                Repto automatiseert.<br />
+                <span className="text-indigo-600">Jij behoudt de controle.</span>
+              </h2>
+              <p className="mt-4 text-lg text-gray-500 leading-relaxed">
+                Repto automatiseert de eerste klantreactie, maar jij beslist altijd wat er gebeurt.
+                Je kunt elk gesprek volgen, overnemen en de AI bijsturen wanneer je wil.
+              </p>
+              <ul className="mt-8 space-y-4">
+                {[
+                  {
+                    icon: Eye,
+                    title: 'Alle gesprekken bekijken',
+                    desc: 'Volg elk WhatsApp-gesprek live in je dashboard. Zie precies wat de AI heeft gezegd.',
+                  },
+                  {
+                    icon: Phone,
+                    title: 'Gesprek overnemen',
+                    desc: 'Wil je zelf reageren? Neem het gesprek over met één klik. De AI pauzeert automatisch.',
+                  },
+                  {
+                    icon: Settings2,
+                    title: 'AI-instellingen aanpassen',
+                    desc: 'Pas toon, instructies en sector aan. De AI leert hoe jij communiceert.',
+                  },
+                ].map(item => (
+                  <li key={item.title} className="flex gap-4">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50">
+                      <item.icon className="h-5 w-5 text-indigo-600" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-900">{item.title}</p>
+                      <p className="mt-0.5 text-sm text-gray-500">{item.desc}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Rechter kolom: mini chat interface mockup */}
+            <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+              <div className="mb-4 flex items-center justify-between">
+                <p className="text-sm font-semibold text-gray-900">Gesprek — Thomas De Smedt</p>
+                <span className="rounded-full bg-green-100 px-2.5 py-0.5 text-[10px] font-semibold text-green-700">Gesloten ✓</span>
+              </div>
+              <div className="space-y-3">
+                {[
+                  { dir: 'in',  text: 'Ik heb een lek in mijn badkamer...' },
+                  { dir: 'out', text: 'Goedenavond! Dat lossen we snel op. Mag ik uw naam en adres?' },
+                  { dir: 'in',  text: 'Thomas De Smedt, Kerkstraat 14, Gent' },
+                  { dir: 'out', text: 'Bedankt! We nemen morgen contact op. 👍' },
+                ].map((m, i) => (
+                  <div key={i} className={`flex ${m.dir === 'out' ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`max-w-[80%] rounded-xl px-3 py-2 text-xs ${
+                      m.dir === 'out'
+                        ? 'bg-indigo-600 text-white'
+                        : 'bg-gray-100 text-gray-700'
+                    }`}>
+                      {m.dir === 'out' && <p className="mb-0.5 text-[9px] font-semibold text-indigo-200">⚡ Repto AI</p>}
+                      {m.text}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 flex items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2">
+                <Phone className="h-3.5 w-3.5 text-indigo-600" />
+                <p className="text-xs text-indigo-700 font-medium">Gesprek overnemen</p>
+                <span className="ml-auto text-[10px] text-indigo-400">AI pauzeert automatisch</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Voor wie is Repto? ────────────────────────────────────────────── */}
+      <section className="bg-gray-50 py-20">
+        <div className="mx-auto max-w-5xl px-6">
+          <div className="mb-12 text-center">
+            <h2 className="text-3xl font-extrabold text-gray-900">Voor wie is Repto?</h2>
+            <p className="mt-3 text-lg text-gray-500">
+              Elke zelfstandige of KMO die WhatsApp-berichten ontvangt en geen leads wil missen.
+            </p>
+          </div>
+          <div className="grid grid-cols-3 gap-4 sm:grid-cols-5 lg:grid-cols-9">
+            {[
+              { emoji: '⚡', label: 'Elektriciens' },
+              { emoji: '🔧', label: 'Loodgieters' },
+              { emoji: '🌡️', label: 'HVAC' },
+              { emoji: '🏠', label: 'Dakwerkers' },
+              { emoji: '🚗', label: 'Garages' },
+              { emoji: '🏡', label: 'Makelaars' },
+              { emoji: '🔨', label: 'Renovatie' },
+              { emoji: '💆', label: 'Kinesisten' },
+              { emoji: '📱', label: 'Agencies' },
+            ].map(s => (
+              <div
+                key={s.label}
+                className="flex flex-col items-center gap-2 rounded-2xl border border-gray-200 bg-white p-4 text-center shadow-sm hover:border-indigo-200 hover:shadow-md transition-all"
+              >
+                <span className="text-2xl">{s.emoji}</span>
+                <span className="text-xs font-medium text-gray-600">{s.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ── Hoe het werkt ─────────────────────────────────────────────────── */}
-      <section id="hoe-werkt-het" className="bg-gray-50 py-24">
+      <section id="hoe-werkt-het" className="py-24">
         <div className="mx-auto max-w-4xl px-6">
           <div className="mb-14 text-center">
             <h2 className="text-3xl font-extrabold text-gray-900">In 3 stappen live</h2>
@@ -342,7 +567,7 @@ export default async function HomePage() {
       </section>
 
       {/* ── Prijzen ───────────────────────────────────────────────────────── */}
-      <section id="prijzen" className="py-24">
+      <section id="prijzen" className="bg-gray-50 py-24">
         <div className="mx-auto max-w-5xl px-6">
           <div className="mb-14 text-center">
             <h2 className="text-3xl font-extrabold text-gray-900">Eenvoudige prijzen</h2>
@@ -356,21 +581,21 @@ export default async function HomePage() {
               {
                 name: 'Starter',
                 price: 49,
-                desc: 'Ideaal voor één klant',
+                desc: 'Voor zelfstandigen die hun eigen WhatsApp willen automatiseren.',
                 features: ['1 klant-organisatie', '200 gesprekken/maand', 'Airtable CRM', 'E-mail support'],
                 popular: false,
               },
               {
                 name: 'Groei',
                 price: 99,
-                desc: 'Meest gekozen',
+                desc: 'Voor bedrijven met meerdere medewerkers of hogere leadvolumes.',
                 features: ['5 klant-organisaties', '500 gesprekken/maand', 'Airtable CRM', 'Afspraken module', 'Prioriteit support'],
                 popular: true,
               },
               {
                 name: 'Agency',
                 price: 199,
-                desc: 'Voor snelgroeiende agencies',
+                desc: 'Voor agencies of partners die meerdere klanten beheren.',
                 features: ['Onbeperkt klanten', 'Onbeperkt gesprekken', 'Airtable + HubSpot', 'Dedicated support', 'White-label'],
                 popular: false,
               },
@@ -391,7 +616,7 @@ export default async function HomePage() {
                   </div>
                 )}
                 <h3 className="text-lg font-bold text-gray-900">{plan.name}</h3>
-                <p className="mt-0.5 text-sm text-gray-500">{plan.desc}</p>
+                <p className="mt-1 text-sm text-gray-500 leading-snug">{plan.desc}</p>
                 <div className="mt-3 inline-flex items-center gap-1 rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-semibold text-green-700 ring-1 ring-green-200">
                   ✨ 7 dagen gratis proberen
                 </div>
@@ -430,10 +655,10 @@ export default async function HomePage() {
       <section className="bg-indigo-600 py-20">
         <div className="mx-auto max-w-3xl px-6 text-center">
           <h2 className="text-3xl font-extrabold text-white">
-            Klaar om meer leads te vangen?
+            Stop met leads missen via WhatsApp.
           </h2>
           <p className="mt-4 text-lg text-indigo-200">
-            Start vandaag met 7 dagen gratis — verbind je eerste klant in minder dan 5 minuten.
+            Start vandaag met 7 dagen gratis — verbind je eerste klant in minder dan 10 minuten.
           </p>
           <Link
             href="/sign-up"
@@ -442,7 +667,7 @@ export default async function HomePage() {
             7 dagen gratis starten <ArrowRight className="h-5 w-5" />
           </Link>
           <p className="mt-4 text-sm text-indigo-300">
-            ✓ 7 dagen gratis trial &nbsp;·&nbsp; ✓ Klaar in 5 min &nbsp;·&nbsp; ✓ Opzeggen wanneer je wil
+            ✓ 7 dagen gratis &nbsp;·&nbsp; ✓ Creditcard vereist &nbsp;·&nbsp; ✓ Opzeggen wanneer je wil
           </p>
         </div>
       </section>
