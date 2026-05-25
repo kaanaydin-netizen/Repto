@@ -28,11 +28,22 @@ class CrmSyncService:
         self.db = db
         self.claude_client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
 
-    async def sync(self, conversation: Conversation, org: Organization) -> None:
-        """Stuur de lead naar het juiste CRM op basis van org.crm_type."""
+    async def sync(
+        self,
+        conversation: Conversation,
+        org: Organization,
+        existing_record_id: str | None = None,
+        existing_log_id: str | None = None,
+    ) -> None:
+        """
+        Stuur de lead naar het juiste CRM op basis van org.crm_type.
+        Als existing_record_id opgegeven is, wordt het bestaande record bijgewerkt (upsert).
+        """
         try:
             if org.crm_type == "airtable":
-                external_id = await self._sync_airtable(conversation, org)
+                external_id = await self._sync_airtable(
+                    conversation, org, record_id=existing_record_id
+                )
             elif org.crm_type == "google_sheets":
                 external_id = await self._sync_google_sheets_legacy(conversation, org)
             elif org.crm_type == "hubspot":
@@ -42,26 +53,48 @@ class CrmSyncService:
             else:
                 return
 
-            log = CrmSyncLog(
-                id=str(uuid.uuid4()),
-                conversation_id=conversation.id,
-                crm_type=org.crm_type,
-                external_id=external_id,
-                success=True,
-            )
-            self.db.add(log)
+            if existing_log_id:
+                # Bestaand log bijwerken
+                log_result = await self.db.execute(
+                    select(CrmSyncLog).where(CrmSyncLog.id == existing_log_id)
+                )
+                log = log_result.scalar_one_or_none()
+                if log:
+                    log.external_id = external_id
+                    log.success = True
+                    log.error_message = None
+            else:
+                log = CrmSyncLog(
+                    id=str(uuid.uuid4()),
+                    conversation_id=conversation.id,
+                    crm_type=org.crm_type,
+                    external_id=external_id,
+                    success=True,
+                )
+                self.db.add(log)
+
             await self.db.commit()
-            logger.info(f"✅ CRM sync: {conversation.wa_contact_phone} → {org.crm_type}")
+            action = "bijgewerkt" if existing_record_id else "aangemaakt"
+            logger.info(f"✅ CRM sync ({action}): {conversation.wa_contact_phone} → {org.crm_type} [{external_id}]")
 
         except Exception as e:
-            log = CrmSyncLog(
-                id=str(uuid.uuid4()),
-                conversation_id=conversation.id,
-                crm_type=org.crm_type,
-                success=False,
-                error_message=str(e),
-            )
-            self.db.add(log)
+            if existing_log_id:
+                log_result = await self.db.execute(
+                    select(CrmSyncLog).where(CrmSyncLog.id == existing_log_id)
+                )
+                log = log_result.scalar_one_or_none()
+                if log:
+                    log.success = False
+                    log.error_message = str(e)
+            else:
+                log = CrmSyncLog(
+                    id=str(uuid.uuid4()),
+                    conversation_id=conversation.id,
+                    crm_type=org.crm_type,
+                    success=False,
+                    error_message=str(e),
+                )
+                self.db.add(log)
             await self.db.commit()
             logger.error(f"❌ CRM sync mislukt voor gesprek {conversation.id}: {e}")
 
@@ -118,10 +151,12 @@ class CrmSyncService:
             return _empty_lead()
 
     async def _sync_airtable(
-        self, conversation: Conversation, org: Organization
+        self, conversation: Conversation, org: Organization, record_id: str | None = None
     ) -> str:
         """
-        Schrijf een nieuwe lead-record naar Airtable via de REST API.
+        Schrijf of update een lead-record in Airtable via de REST API.
+        - record_id=None  → POST (nieuw record aanmaken)
+        - record_id=recXX → PATCH (bestaand record bijwerken)
         crm_credentials_encrypted bevat: {"api_key": "pat...", "base_id": "app...", "table_name": "Leads"}
         """
         if not org.crm_credentials_encrypted:
@@ -167,23 +202,33 @@ class CrmSyncService:
             "Eerste Bericht": (first_inbound.content[:500] if first_inbound else ""),
         }
 
-        url = f"{AIRTABLE_API_URL}/{base_id}/{table_name}"
-        headers = {
+        base_url = f"{AIRTABLE_API_URL}/{base_id}/{table_name}"
+        req_headers = {
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
         }
 
         async with httpx.AsyncClient(timeout=15) as client:
-            resp = await client.post(url, headers=headers, json={"fields": fields})
+            if record_id:
+                # PATCH — bestaand record bijwerken
+                resp = await client.patch(
+                    f"{base_url}/{record_id}",
+                    headers=req_headers,
+                    json={"fields": fields},
+                )
+            else:
+                # POST — nieuw record aanmaken
+                resp = await client.post(base_url, headers=req_headers, json={"fields": fields})
 
         if resp.status_code not in (200, 201):
             raise ValueError(f"Airtable API fout {resp.status_code}: {resp.text[:300]}")
 
-        record_id = resp.json().get("id", "unknown")
+        returned_id = resp.json().get("id", "unknown")
+        action = "bijgewerkt" if record_id else "aangemaakt"
         logger.info(
-            f"📋 Airtable: {fields['Naam']} | {fields['Type Werk']} | urgentie={fields['Urgentie']} → {record_id}"
+            f"📋 Airtable {action}: {fields['Naam']} | {fields['Type Werk']} | urgentie={fields['Urgentie']} → {returned_id}"
         )
-        return record_id
+        return returned_id
 
     async def _sync_google_sheets_legacy(
         self, conversation: Conversation, org: Organization

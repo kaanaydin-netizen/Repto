@@ -118,7 +118,15 @@ class WhatsAppService:
             return response.json()
 
     async def sync_to_crm(self, conversation: Conversation) -> None:
-        """Synchroniseer het gesprek naar het geconfigureerde CRM."""
+        """
+        Synchroniseer het gesprek naar het geconfigureerde CRM.
+
+        Logica:
+        - Wacht tot er minstens 3 berichten zijn (zodat de AI al naam/adres/type werk
+          heeft kunnen verzamelen) voordat de eerste sync plaatsvindt.
+        - Bij elke volgende sync wordt het bestaande Airtable-record bijgewerkt (upsert),
+          zodat de lead altijd up-to-date is terwijl het gesprek vordert.
+        """
         org_result = await self.db.execute(
             select(Organization).where(Organization.id == conversation.org_id)
         )
@@ -126,11 +134,23 @@ class WhatsAppService:
         if not org or org.crm_type == "none":
             return
 
-        # Al eerder gesynchroniseerd?
+        # Tel het aantal berichten — wacht op minstens 3 (≈ 2 inbound + 1 outbound)
+        msg_result = await self.db.execute(
+            select(Message).where(Message.conversation_id == conversation.id)
+        )
+        msg_count = len(msg_result.scalars().all())
+        if msg_count < 3:
+            return  # Nog te weinig info om te synchroniseren
+
+        # Controleer of er al een sync-log bestaat (voor upsert)
         sync_result = await self.db.execute(
             select(CrmSyncLog).where(CrmSyncLog.conversation_id == conversation.id)
         )
-        if sync_result.scalar_one_or_none():
-            return  # Niet dubbel synchroniseren
+        existing_log = sync_result.scalar_one_or_none()
 
-        await self.crm_sync.sync(conversation=conversation, org=org)
+        await self.crm_sync.sync(
+            conversation=conversation,
+            org=org,
+            existing_record_id=existing_log.external_id if existing_log else None,
+            existing_log_id=existing_log.id if existing_log else None,
+        )
