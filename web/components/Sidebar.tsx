@@ -10,6 +10,7 @@ import {
   Settings,
   Zap,
   Building2,
+  CreditCard,
 } from 'lucide-react'
 
 const nav = [
@@ -18,6 +19,7 @@ const nav = [
   { href: '/afspraken',    label: 'Afspraken',    icon: Calendar },
   { href: '/klanten',      label: 'Klanten',      icon: Building2 },
   { href: '/instellingen', label: 'Instellingen', icon: Settings },
+  { href: '/billing',      label: 'Abonnement',   icon: CreditCard },
 ]
 
 export default function Sidebar() {
