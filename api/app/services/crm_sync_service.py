@@ -147,6 +147,14 @@ class CrmSyncService:
         # Lead-data extraheren via Claude Haiku
         lead = await self._extract_lead_data(all_messages)
 
+        # Map interne status naar Airtable singleSelect keuzes
+        STATUS_MAP = {
+            "new":              "Todo",
+            "in_progress":      "In progress",
+            "appointment_set":  "In progress",
+            "closed":           "Done",
+        }
+
         fields = {
             "Datum": datetime.now().strftime("%d/%m/%Y %H:%M"),
             "Naam": lead.get("naam") or conversation.wa_contact_name or "Onbekend",
@@ -155,7 +163,7 @@ class CrmSyncService:
             "Type Werk": lead.get("type_werk") or "",
             "Gewenste Datum": lead.get("gewenste_datum") or "",
             "Urgentie": lead.get("urgentie") or "",
-            "Status": conversation.status,
+            "Status": STATUS_MAP.get(conversation.status, "Todo"),
             "Eerste Bericht": (first_inbound.content[:500] if first_inbound else ""),
         }
 
