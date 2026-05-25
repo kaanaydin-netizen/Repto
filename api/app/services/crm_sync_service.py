@@ -30,11 +30,18 @@ SHEET_TAB = "Repto Leads"
 
 def _get_sheets_service():
     """Bouw een Google Sheets API service op via de service account credentials."""
-    creds_b64 = settings.google_sheets_credentials_b64
-    if not creds_b64:
-        raise ValueError("GOOGLE_SHEETS_CREDENTIALS_B64 env var niet ingesteld")
+    # Probeer eerst compact JSON, dan base64 (legacy)
+    creds_raw = settings.google_sheets_credentials_json or settings.google_sheets_credentials_b64
+    if not creds_raw:
+        raise ValueError("GOOGLE_SHEETS_CREDENTIALS_JSON env var niet ingesteld")
 
-    creds_json = json.loads(base64.b64decode(creds_b64).decode())
+    # Detecteer base64 vs plain JSON
+    stripped = creds_raw.strip()
+    if stripped.startswith("{"):
+        creds_json = json.loads(stripped)
+    else:
+        creds_json = json.loads(base64.b64decode(stripped).decode())
+
     credentials = service_account.Credentials.from_service_account_info(
         creds_json, scopes=SHEETS_SCOPES
     )
