@@ -152,6 +152,18 @@ Stel één vraag tegelijk. Verwijs bij complexe vragen naar de juiste persoon.
 }
 
 
+CLOSING_INSTRUCTION = """\
+
+---
+BELANGRIJK — Gesprek afsluiten:
+Zodra je ALLE benodigde informatie hebt verzameld EN de klant de samenvatting heeft \
+bevestigd (bijv. "ja", "correct", "top", "ok"), voeg je op het absolute einde van \
+je antwoord de tag [GESPREK_AFGEROND] toe. Geen spaties of tekst erna.
+Voorbeeld van de laatste zin: "Een medewerker neemt spoedig contact met u op. [GESPREK_AFGEROND]"
+Voeg deze tag NOOIT toe als de klant nog niet bevestigd heeft of als er nog vragen openstaan.
+"""
+
+
 def build_system_prompt(org: Organization) -> str:
     """
     Bouw het systeem-bericht op basis van de organisatie-configuratie.
@@ -160,11 +172,12 @@ def build_system_prompt(org: Organization) -> str:
     sector = (org.sector or "algemeen").lower().strip()
     template = SECTOR_PROMPTS.get(sector, SECTOR_PROMPTS["algemeen"])
 
-    return template.format(
+    base = template.format(
         company_name=org.name or "ons bedrijf",
         tone=org.ai_tone or "professioneel",
         company_info=org.ai_system_prompt or "",
     )
+    return base + CLOSING_INSTRUCTION
 
 
 class AIService:

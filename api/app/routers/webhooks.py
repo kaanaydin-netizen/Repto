@@ -50,6 +50,9 @@ async def receive_message(
     return {}
 
 
+CLOSING_TAG = "[GESPREK_AFGEROND]"
+
+
 async def process_incoming_message(
     from_phone: str,
     to_phone: str,
@@ -63,9 +66,10 @@ async def process_incoming_message(
     1. Gesprek ophalen of aanmaken
     2. Inkomend bericht opslaan
     3. AI-antwoord genereren
-    4. Antwoord versturen via Twilio
-    5. Uitgaand bericht opslaan
-    6. CRM synchroniseren (Google Sheets voor MVP)
+    4. Detecteer [GESPREK_AFGEROND] tag → gesprek afsluiten
+    5. Antwoord versturen via Twilio (zonder de tag)
+    6. Uitgaand bericht opslaan
+    7. CRM synchroniseren naar Airtable
     """
     wa_service = WhatsAppService(db)
     ai_service = AIService(db)
@@ -92,21 +96,31 @@ async def process_incoming_message(
             incoming_message=body,
         )
 
-        # Antwoord versturen via Twilio
+        # Detecteer sluit-signaal van de AI
+        conversation_closed = CLOSING_TAG in reply
+        clean_reply = reply.replace(CLOSING_TAG, "").strip()
+
+        # Gesprek afsluiten indien bevestigd → nieuwe lead bij volgend bericht
+        if conversation_closed:
+            conversation.status = "closed"
+            await db.commit()
+            await db.refresh(conversation)
+
+        # Antwoord versturen via Twilio (altijd zonder de interne tag)
         await wa_service.send_message(
             to_phone=from_phone,
-            message=reply,
+            message=clean_reply,
         )
 
-        # Uitgaand bericht opslaan
+        # Uitgaand bericht opslaan (ook zonder tag)
         await wa_service.save_message(
             conversation_id=conversation.id,
             direction="outbound",
-            content=reply,
+            content=clean_reply,
             ai_generated=True,
         )
 
-        # CRM sync (Google Sheets voor MVP)
+        # CRM sync naar Airtable
         await wa_service.sync_to_crm(conversation=conversation)
 
     except Exception as e:

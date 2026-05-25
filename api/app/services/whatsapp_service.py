@@ -148,9 +148,19 @@ class WhatsAppService:
         )
         existing_log = sync_result.scalar_one_or_none()
 
+        # Alleen een Airtable record ID (begint met "rec") gebruiken voor PATCH.
+        # Google Sheets IDs (bijv. "sheets_...") zijn geen geldig Airtable ID.
+        existing_record_id = None
+        existing_log_id = None
+        if existing_log:
+            existing_log_id = existing_log.id
+            ext_id = existing_log.external_id or ""
+            if ext_id.startswith("rec"):
+                existing_record_id = ext_id
+
         await self.crm_sync.sync(
             conversation=conversation,
             org=org,
-            existing_record_id=existing_log.external_id if existing_log else None,
-            existing_log_id=existing_log.id if existing_log else None,
+            existing_record_id=existing_record_id,
+            existing_log_id=existing_log_id,
         )
