@@ -40,8 +40,9 @@ function Section({ icon: Icon, title, children }: {
   )
 }
 
-export default async function KlantDetailPage({ params }: { params: { id: string } }) {
-  const org = await api.organizations.get(params.id).catch(() => null)
+export default async function KlantDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const org = await api.organizations.get(id).catch(() => null)
   if (!org) notFound()
 
   const webhookUrl = `${process.env.NEXT_PUBLIC_API_URL || 'https://repto-production.up.railway.app'}/webhooks/whatsapp/${org.id}`

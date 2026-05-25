@@ -6,8 +6,9 @@ import BewerkClient from './BewerkClient'
 
 export const dynamic = 'force-dynamic'
 
-export default async function BewerkPage({ params }: { params: { id: string } }) {
-  const org = await api.organizations.get(params.id).catch(() => null)
+export default async function BewerkPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const org = await api.organizations.get(id).catch(() => null)
   if (!org) notFound()
 
   return (

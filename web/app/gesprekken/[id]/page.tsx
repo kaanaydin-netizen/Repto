@@ -7,11 +7,12 @@ export const dynamic = 'force-dynamic'
 export default async function GesprekDetailPage({
   params,
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }) {
+  const { id } = await params
   const [conv, messages] = await Promise.all([
-    api.conversations.get(params.id).catch(() => null),
-    api.conversations.messages(params.id).catch(() => []),
+    api.conversations.get(id).catch(() => null),
+    api.conversations.messages(id).catch(() => []),
   ])
 
   if (!conv) notFound()
