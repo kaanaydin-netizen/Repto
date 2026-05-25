@@ -3,6 +3,7 @@
   "buildCommand": "npm run build",
   "outputDirectory": ".next",
   "env": {
-    "NEXT_PUBLIC_API_URL": "https://repto-production.up.railway.app"
+    "NEXT_PUBLIC_API_URL": "https://repto-production.up.railway.app",
+    "NEXT_PUBLIC_ORG_ID": "b4c28832-a365-4f99-a4dc-b25a8ea7da3a"
   }
 }
