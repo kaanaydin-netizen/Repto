@@ -1,19 +1,15 @@
 """
-CRM Sync Service — synchroniseert leads rechtstreeks naar Google Sheets
-via de Google Sheets API (service account). Geen webhook, geen redirect.
-v0.3: Lead-extractie via Claude Haiku + 9-kolommen directe API write
+CRM Sync Service — synchroniseert leads naar Airtable (primair) of Google Sheets (legacy).
+v0.4: Airtable als standaard CRM via httpx REST API
 """
 from __future__ import annotations
-import asyncio
-import base64
 import json
 import logging
 import uuid
 from datetime import datetime
 
 import anthropic
-from google.oauth2 import service_account
-from googleapiclient.discovery import build
+import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -24,28 +20,7 @@ settings = get_settings()
 logger = logging.getLogger(__name__)
 
 EXTRACTION_MODEL = "claude-haiku-4-5-20251001"
-SHEETS_SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
-SHEET_TAB = "Repto Leads"
-
-
-def _get_sheets_service():
-    """Bouw een Google Sheets API service op via de service account credentials."""
-    # Probeer eerst compact JSON, dan base64 (legacy)
-    creds_raw = settings.google_sheets_credentials_json or settings.google_sheets_credentials_b64
-    if not creds_raw:
-        raise ValueError("GOOGLE_SHEETS_CREDENTIALS_JSON env var niet ingesteld")
-
-    # Detecteer base64 vs plain JSON
-    stripped = creds_raw.strip()
-    if stripped.startswith("{"):
-        creds_json = json.loads(stripped)
-    else:
-        creds_json = json.loads(base64.b64decode(stripped).decode())
-
-    credentials = service_account.Credentials.from_service_account_info(
-        creds_json, scopes=SHEETS_SCOPES
-    )
-    return build("sheets", "v4", credentials=credentials, cache_discovery=False)
+AIRTABLE_API_URL = "https://api.airtable.com/v0"
 
 
 class CrmSyncService:
@@ -56,12 +31,14 @@ class CrmSyncService:
     async def sync(self, conversation: Conversation, org: Organization) -> None:
         """Stuur de lead naar het juiste CRM op basis van org.crm_type."""
         try:
-            if org.crm_type == "google_sheets":
-                external_id = await self._sync_google_sheets(conversation, org)
+            if org.crm_type == "airtable":
+                external_id = await self._sync_airtable(conversation, org)
+            elif org.crm_type == "google_sheets":
+                external_id = await self._sync_google_sheets_legacy(conversation, org)
             elif org.crm_type == "hubspot":
-                external_id = await self._sync_hubspot(conversation, org)
+                raise NotImplementedError("HubSpot integratie is gepland voor fase 2")
             elif org.crm_type == "pipedrive":
-                external_id = await self._sync_pipedrive(conversation, org)
+                raise NotImplementedError("Pipedrive integratie is gepland voor fase 2")
             else:
                 return
 
@@ -140,22 +117,23 @@ class CrmSyncService:
             logger.error(f"_extract_lead_data fout: {e}")
             return _empty_lead()
 
-    async def _sync_google_sheets(
+    async def _sync_airtable(
         self, conversation: Conversation, org: Organization
     ) -> str:
         """
-        Schrijf een nieuwe lead-rij rechtstreeks naar Google Sheets
-        via de Sheets API (service account). Geen webhook nodig.
-        9 kolommen: Datum | Naam | Telefoon | Adres | Type Werk |
-                    Gewenste Datum | Urgentie | Status | Eerste Bericht
+        Schrijf een nieuwe lead-record naar Airtable via de REST API.
+        crm_credentials_encrypted bevat: {"api_key": "pat...", "base_id": "app...", "table_name": "Leads"}
         """
         if not org.crm_credentials_encrypted:
             raise ValueError("crm_credentials_encrypted niet geconfigureerd")
 
         config = json.loads(org.crm_credentials_encrypted)
-        spreadsheet_id = config.get("spreadsheet_id")
-        if not spreadsheet_id:
-            raise ValueError("spreadsheet_id ontbreekt in crm_credentials_encrypted")
+        api_key = config.get("api_key")
+        base_id = config.get("base_id")
+        table_name = config.get("table_name", "Leads")
+
+        if not api_key or not base_id:
+            raise ValueError("api_key en base_id zijn verplicht in crm_credentials_encrypted")
 
         # Alle berichten ophalen
         msgs_result = await self.db.execute(
@@ -167,6 +145,75 @@ class CrmSyncService:
         first_inbound = next((m for m in all_messages if m.direction == "inbound"), None)
 
         # Lead-data extraheren via Claude Haiku
+        lead = await self._extract_lead_data(all_messages)
+
+        fields = {
+            "Datum": datetime.now().strftime("%d/%m/%Y %H:%M"),
+            "Naam": lead.get("naam") or conversation.wa_contact_name or "Onbekend",
+            "Telefoon": conversation.wa_contact_phone,
+            "Adres": lead.get("adres") or "",
+            "Type Werk": lead.get("type_werk") or "",
+            "Gewenste Datum": lead.get("gewenste_datum") or "",
+            "Urgentie": lead.get("urgentie") or "",
+            "Status": conversation.status,
+            "Eerste Bericht": (first_inbound.content[:500] if first_inbound else ""),
+        }
+
+        url = f"{AIRTABLE_API_URL}/{base_id}/{table_name}"
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        }
+
+        async with httpx.AsyncClient(timeout=15) as client:
+            resp = await client.post(url, headers=headers, json={"fields": fields})
+
+        if resp.status_code not in (200, 201):
+            raise ValueError(f"Airtable API fout {resp.status_code}: {resp.text[:300]}")
+
+        record_id = resp.json().get("id", "unknown")
+        logger.info(
+            f"📋 Airtable: {fields['Naam']} | {fields['Type Werk']} | urgentie={fields['Urgentie']} → {record_id}"
+        )
+        return record_id
+
+    async def _sync_google_sheets_legacy(
+        self, conversation: Conversation, org: Organization
+    ) -> str:
+        """
+        Legacy Google Sheets sync via service account.
+        Bewaard voor bestaande organisaties met crm_type='google_sheets'.
+        """
+        import asyncio
+        import base64
+        from google.oauth2 import service_account
+        from googleapiclient.discovery import build
+
+        SHEETS_SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
+        SHEET_TAB = "Repto Leads"
+
+        if not org.crm_credentials_encrypted:
+            raise ValueError("crm_credentials_encrypted niet geconfigureerd")
+
+        config = json.loads(org.crm_credentials_encrypted)
+        spreadsheet_id = config.get("spreadsheet_id")
+        if not spreadsheet_id:
+            raise ValueError("spreadsheet_id ontbreekt in crm_credentials_encrypted")
+
+        creds_raw = settings.google_sheets_credentials_json or settings.google_sheets_credentials_b64
+        if not creds_raw:
+            raise ValueError("GOOGLE_SHEETS_CREDENTIALS_JSON env var niet ingesteld")
+        stripped = creds_raw.strip()
+        creds_json = json.loads(stripped) if stripped.startswith("{") else json.loads(base64.b64decode(stripped).decode())
+        credentials = service_account.Credentials.from_service_account_info(creds_json, scopes=SHEETS_SCOPES)
+
+        msgs_result = await self.db.execute(
+            select(Message)
+            .where(Message.conversation_id == conversation.id)
+            .order_by(Message.sent_at.asc())
+        )
+        all_messages = list(msgs_result.scalars().all())
+        first_inbound = next((m for m in all_messages if m.direction == "inbound"), None)
         lead = await self._extract_lead_data(all_messages)
 
         row = [
@@ -181,35 +228,17 @@ class CrmSyncService:
             (first_inbound.content[:300] if first_inbound else ""),
         ]
 
-        # Schrijf naar Sheets in een thread (synchrone API)
-        await asyncio.to_thread(
-            _append_row_to_sheet,
-            spreadsheet_id=spreadsheet_id,
-            tab_name=SHEET_TAB,
-            row=row,
-        )
+        def _append():
+            service = build("sheets", "v4", credentials=credentials, cache_discovery=False)
+            service.spreadsheets().values().append(
+                spreadsheetId=spreadsheet_id,
+                range=f"{SHEET_TAB}!A:I",
+                valueInputOption="USER_ENTERED",
+                body={"values": [row]},
+            ).execute()
 
-        logger.info(
-            f"📊 Sheets: {row[1]} | {lead.get('type_werk')} | urgentie={lead.get('urgentie')}"
-        )
+        await asyncio.to_thread(_append)
         return f"sheets_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-
-    async def _sync_hubspot(self, conversation: Conversation, org: Organization) -> str:
-        raise NotImplementedError("HubSpot integratie is gepland voor fase 2")
-
-    async def _sync_pipedrive(self, conversation: Conversation, org: Organization) -> str:
-        raise NotImplementedError("Pipedrive integratie is gepland voor fase 2")
-
-
-def _append_row_to_sheet(spreadsheet_id: str, tab_name: str, row: list) -> None:
-    """Synchrone helper — voer uit in thread via asyncio.to_thread()."""
-    service = _get_sheets_service()
-    service.spreadsheets().values().append(
-        spreadsheetId=spreadsheet_id,
-        range=f"{tab_name}!A:I",
-        valueInputOption="USER_ENTERED",
-        body={"values": [row]},
-    ).execute()
 
 
 # ─── Hulpfuncties ─────────────────────────────────────────────────────────────

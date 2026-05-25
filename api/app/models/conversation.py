@@ -19,7 +19,8 @@ class ConversationStatus(str, enum.Enum):
 
 
 class CrmType(str, enum.Enum):
-    google_sheets = "google_sheets"
+    airtable = "airtable"
+    google_sheets = "google_sheets"  # legacy
     hubspot = "hubspot"
     pipedrive = "pipedrive"
     none = "none"
