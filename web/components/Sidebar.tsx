@@ -1,6 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { UserButton, useUser } from '@clerk/nextjs'
 import clsx from 'clsx'
 import {
   LayoutDashboard,
@@ -21,6 +22,7 @@ const nav = [
 
 export default function Sidebar() {
   const path = usePathname()
+  const { user } = useUser()
 
   return (
     <aside className="flex h-screen w-60 flex-col border-r border-gray-200 bg-white">
@@ -60,12 +62,18 @@ export default function Sidebar() {
       {/* Footer */}
       <div className="border-t border-gray-200 p-4">
         <div className="flex items-center gap-3 rounded-lg bg-gray-50 px-3 py-2.5">
-          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-indigo-600 text-xs font-bold text-white">
-            K
-          </div>
+          <UserButton
+            appearance={{
+              elements: {
+                avatarBox: 'h-7 w-7',
+              },
+            }}
+          />
           <div className="min-w-0 flex-1">
-            <p className="truncate text-xs font-medium text-gray-900">Mijn bedrijf</p>
-            <p className="truncate text-[10px] text-gray-500">Starter plan</p>
+            <p className="truncate text-xs font-medium text-gray-900">
+              {user?.firstName ?? user?.emailAddresses[0]?.emailAddress ?? 'Account'}
+            </p>
+            <p className="truncate text-[10px] text-gray-500">Repto Agency</p>
           </div>
         </div>
       </div>

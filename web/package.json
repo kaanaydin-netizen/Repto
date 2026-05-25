@@ -9,6 +9,8 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@clerk/localizations": "^4.6.8",
+    "@clerk/nextjs": "^7.4.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.3.0",
     "lucide-react": "^1.16.0",
