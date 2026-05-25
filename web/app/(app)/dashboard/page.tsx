@@ -6,7 +6,7 @@ import { api, ORG_ID } from '@/lib/api'
 export const dynamic = 'force-dynamic'
 
 export default async function DashboardPage() {
-  const [stats, conversations] = await Promise.all([
+  const [stats, conversations, org] = await Promise.all([
     api.stats(ORG_ID).catch(() => ({
       total_conversations: 0,
       new_leads: 0,
@@ -14,6 +14,7 @@ export default async function DashboardPage() {
       crm_synced: 0,
     })),
     api.conversations.list(ORG_ID).catch(() => []),
+    ORG_ID ? api.organizations.get(ORG_ID).catch(() => null) : Promise.resolve(null),
   ])
 
   const recent = conversations.slice(0, 5)
@@ -25,7 +26,11 @@ export default async function DashboardPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
           <p className="mt-1 text-sm text-gray-500">
-            Live overzicht van je gesprekken en leads.
+            {org ? (
+              <>Live overzicht voor <span className="font-medium text-gray-700">{org.name}</span>.</>
+            ) : (
+              'Live overzicht van je gesprekken en leads.'
+            )}
           </p>
         </div>
         <a
