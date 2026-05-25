@@ -33,6 +33,7 @@ class OrganizationCreate(BaseModel):
     whatsapp_phone_number_id: Optional[str] = None
     crm_type: str = "none"
     airtable: Optional[AirtableCredentials] = None
+    clerk_user_id: Optional[str] = None  # multi-tenant: koppeling met Clerk gebruiker
 
 
 class OrganizationUpdate(BaseModel):
@@ -76,10 +77,14 @@ def _serialize_crm(crm_type: str, airtable: Optional[AirtableCredentials]) -> Op
 
 @router.get("/", response_model=list[OrganizationOut])
 async def list_organizations(
+    clerk_user_id: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
 ):
-    """Haal alle organisaties op (voor agency-overzicht)."""
-    result = await db.execute(select(Organization).order_by(Organization.name))
+    """Haal organisaties op. Filter op clerk_user_id als opgegeven (multi-tenant)."""
+    query = select(Organization).order_by(Organization.name)
+    if clerk_user_id:
+        query = query.where(Organization.clerk_user_id == clerk_user_id)
+    result = await db.execute(query)
     return result.scalars().all()
 
 
@@ -99,6 +104,7 @@ async def create_organization(
         whatsapp_phone_number_id=data.whatsapp_phone_number_id,
         crm_type=data.crm_type,
         crm_credentials_encrypted=_serialize_crm(data.crm_type, data.airtable),
+        clerk_user_id=data.clerk_user_id,
     )
     db.add(org)
     await db.commit()

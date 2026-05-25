@@ -41,6 +41,8 @@ class Organization(Base):
     crm_type: Mapped[str] = mapped_column(String, default="none")
     crm_credentials_encrypted: Mapped[Optional[str]] = mapped_column(Text)
     crm_sheet_id: Mapped[Optional[str]] = mapped_column(String)
+    # Multi-tenant: koppeling met Clerk gebruiker
+    clerk_user_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     created_at: Mapped[DateTime] = mapped_column(DateTime, server_default=func.now())
 
     conversations: Mapped[List["Conversation"]] = relationship(back_populates="organization")

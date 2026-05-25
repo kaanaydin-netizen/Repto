@@ -1,5 +1,6 @@
 import { Calendar, Clock, CheckCircle2, XCircle } from 'lucide-react'
-import { api, ORG_ID } from '@/lib/api'
+import { api } from '@/lib/api'
+import { getOrgId } from '@/lib/org'
 import type { Appointment } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
@@ -108,6 +109,7 @@ function AfspraakCard({ appt }: { appt: Appointment }) {
 }
 
 export default async function AfsprakenPage() {
+  const ORG_ID = await getOrgId()
   const appts = ORG_ID
     ? await api.appointments.list(ORG_ID).catch(() => [])
     : []

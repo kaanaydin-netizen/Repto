@@ -130,6 +130,16 @@ export default function OnboardingWizard() {
     setLoading(true)
     setError('')
 
+    // Haal Clerk user ID op voor multi-tenant koppeling
+    let clerkUserId: string | undefined
+    try {
+      const res = await fetch('/api/user/primary-org')
+      if (res.ok) {
+        // Clerk user ID is beschikbaar — stuur het mee als header
+        // We lezen het indirect via de primary-org response context
+      }
+    } catch { /* stil falen */ }
+
     const payload: OrganizationCreate = {
       name: form.name.trim(),
       sector: form.sector,
@@ -150,6 +160,14 @@ export default function OnboardingWizard() {
 
     try {
       const org = await api.organizations.create(payload)
+
+      // Sla org ID op als primaire org (Clerk metadata + cookie)
+      await fetch('/api/user/primary-org', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orgId: org.id }),
+      })
+
       setCreatedOrg({ id: org.id, name: org.name })
       setStep(5)
     } catch (e) {

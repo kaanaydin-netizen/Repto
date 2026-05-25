@@ -1,11 +1,14 @@
 import { MessageSquare, UserPlus, CheckCircle2, RefreshCw } from 'lucide-react'
 import StatCard from '@/components/StatCard'
 import ConversationCard from '@/components/ConversationCard'
-import { api, ORG_ID } from '@/lib/api'
+import { api } from '@/lib/api'
+import { getOrgId } from '@/lib/org'
 
 export const dynamic = 'force-dynamic'
 
 export default async function DashboardPage() {
+  const ORG_ID = await getOrgId()
+
   const [stats, conversations, org] = await Promise.all([
     api.stats(ORG_ID).catch(() => ({
       total_conversations: 0,

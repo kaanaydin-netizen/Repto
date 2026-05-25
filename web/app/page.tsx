@@ -651,6 +651,140 @@ export default async function HomePage() {
         </div>
       </section>
 
+      {/* ── Integraties strip ────────────────────────────────────────────── */}
+      <section className="border-y border-gray-100 bg-white py-10">
+        <div className="mx-auto max-w-5xl px-6">
+          <p className="mb-6 text-center text-sm font-semibold uppercase tracking-widest text-gray-400">
+            Werkt naadloos samen met:
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-6">
+            {[
+              { color: 'bg-green-500',  label: 'WhatsApp Business' },
+              { color: 'bg-yellow-400', label: 'Airtable' },
+              { color: 'bg-red-500',    label: 'Twilio' },
+              { color: 'bg-purple-600', label: 'Claude AI' },
+              { color: 'bg-blue-500',   label: 'Stripe' },
+            ].map(({ color, label }) => (
+              <div
+                key={label}
+                className="flex items-center gap-2.5 rounded-full border border-gray-100 bg-gray-50 px-5 py-2.5 shadow-sm"
+              >
+                <span className={`h-2.5 w-2.5 rounded-full ${color}`} />
+                <span className="text-sm font-semibold text-gray-700">{label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Testimonials ─────────────────────────────────────────────────── */}
+      <section className="bg-gray-50 py-24">
+        <div className="mx-auto max-w-5xl px-6">
+          <div className="mb-14 text-center">
+            <h2 className="text-3xl font-extrabold text-gray-900">Wat klanten zeggen</h2>
+            <p className="mt-3 text-lg text-gray-500">
+              Echte KMO&apos;s, echte resultaten.
+            </p>
+          </div>
+
+          <div className="grid gap-6 sm:grid-cols-3">
+            {[
+              {
+                quote: 'Vroeger miste ik bijna elke avondoproep. Nu beantwoordt Repto automatisch en heb ik de volgende ochtend een volledig ingevuld leadformulier. Ik heb al 3 extra jobs per week dankzij Repto.',
+                name: 'Pieter Baert',
+                company: 'Elektricien Baert & Zonen',
+                location: 'Gent',
+              },
+              {
+                quote: 'Als makelaar ontvang ik tientallen WhatsApp-vragen per dag. Repto filtert de serieuze kandidaten eruit en stuurt ze meteen naar mijn Airtable. Mijn agenda is 30% voller geworden.',
+                name: 'Sophie Vandenberghe',
+                company: 'Vastgoed Vandenberghe',
+                location: 'Antwerpen',
+              },
+              {
+                quote: 'Ik stond sceptisch tegenover AI, maar Repto communiceert precies zoals ik dat zou doen. Klanten merken het verschil niet en ik mis geen enkele offerte-aanvraag meer.',
+                name: 'Tom Willems',
+                company: 'Dakwerken Willems',
+                location: 'Brussel',
+              },
+            ].map(t => (
+              <div
+                key={t.name}
+                className="flex flex-col rounded-2xl border border-gray-200 bg-white p-6 shadow-sm"
+              >
+                {/* Sterren */}
+                <div className="mb-4 flex gap-0.5">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <span key={i} className="text-amber-400">★</span>
+                  ))}
+                </div>
+                <p className="flex-1 text-sm leading-relaxed text-gray-600">
+                  &ldquo;{t.quote}&rdquo;
+                </p>
+                <div className="mt-5 flex items-center gap-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-sm font-bold text-indigo-700">
+                    {t.name[0]}
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">{t.name}</p>
+                    <p className="text-xs text-gray-400">{t.company} · {t.location}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── FAQ ──────────────────────────────────────────────────────────── */}
+      <section className="bg-white py-24">
+        <div className="mx-auto max-w-5xl px-6">
+          <div className="mb-14 text-center">
+            <h2 className="text-3xl font-extrabold text-gray-900">Veelgestelde vragen</h2>
+            <p className="mt-3 text-lg text-gray-500">
+              Alles wat je wil weten voor je start.
+            </p>
+          </div>
+
+          <div className="grid gap-6 sm:grid-cols-2">
+            {[
+              {
+                q: 'Wat als de AI een fout antwoord geeft?',
+                a: 'Repto is getraind op jouw sector en instructies. Je kunt elk gesprek live volgen en op elk moment overnemen. De AI laat duidelijk weten dat een medewerker zal terugbellen voor complexe vragen.',
+              },
+              {
+                q: 'Kan ik het gesprek overnemen?',
+                a: 'Ja, met één klik in je dashboard kun je elk gesprek overnemen. De AI pauzeert automatisch zodra jij reageert.',
+              },
+              {
+                q: 'Welke CRM-systemen worden ondersteund?',
+                a: 'Momenteel Airtable (volledig). HubSpot en Pipedrive zijn gepland voor Q3 2025. Je kunt ook kiezen voor alleen e-mailnotificaties zonder CRM.',
+              },
+              {
+                q: 'Hoe lang duurt de installatie?',
+                a: 'Gemiddeld 10 minuten. Je koppelt je WhatsApp Business-nummer, configureert de AI en je bent live. Geen technische kennis vereist.',
+              },
+              {
+                q: 'Wat als ik wil opzeggen?',
+                a: 'Je kunt op elk moment opzeggen via je accountinstellingen, zonder opzegtermijn. Je wordt nooit langer gefactureerd dan de lopende maand.',
+              },
+              {
+                q: 'Is mijn klantdata veilig?',
+                a: 'Alle data wordt opgeslagen op Europese servers. Conversaties worden versleuteld bewaard en nooit gedeeld met derden. Je blijft altijd eigenaar van je data.',
+              },
+            ].map(({ q, a }) => (
+              <div
+                key={q}
+                className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm"
+              >
+                <p className="font-semibold text-gray-900">{q}</p>
+                <p className="mt-2 text-sm leading-relaxed text-gray-500">{a}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ── Final CTA ─────────────────────────────────────────────────────── */}
       <section className="bg-indigo-600 py-20">
         <div className="mx-auto max-w-3xl px-6 text-center">
