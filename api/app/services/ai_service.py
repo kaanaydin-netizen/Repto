@@ -408,6 +408,24 @@ class AIService:
                 conversation.org_id,
             )
 
+            # Probeer Google Calendar sync (faalt stil als niet geconfigureerd)
+            try:
+                from app.services.calendar_service import GoogleCalendarService
+                cal_service = GoogleCalendarService()
+                if cal_service.is_configured():
+                    # org ophalen
+                    org_result = await self.db.execute(
+                        select(Organization).where(Organization.id == conversation.org_id)
+                    )
+                    org = org_result.scalar_one_or_none()
+                    if org:
+                        event_id = await cal_service.create_event(appointment, org)
+                        if event_id:
+                            appointment.google_event_id = event_id
+                            await self.db.commit()
+            except Exception as exc:
+                logger.warning("Google Calendar sync overgeslagen: %s", exc)
+
             return (
                 f"Afspraak succesvol aangemaakt: '{title}' op "
                 f"{start_dt.strftime('%d/%m/%Y om %H:%M')} "
