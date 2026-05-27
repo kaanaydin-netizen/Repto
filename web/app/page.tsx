@@ -78,7 +78,7 @@ export default async function HomePage() {
           {/* Badge */}
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-4 py-1.5 text-sm font-medium text-indigo-700">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-indigo-500" />
-            WhatsApp AI voor Belgische & Nederlandse KMO's
+            Voor loodgieters, installateurs, garages & meer
           </div>
 
           {/* Headline */}
@@ -90,8 +90,8 @@ export default async function HomePage() {
           {/* Sub */}
           <p className="mx-auto mt-6 max-w-2xl text-xl leading-relaxed text-gray-500">
             Repto beantwoordt automatisch WhatsApp-berichten van klanten, verzamelt naam,
-            adres en aanvraagdetails en stuurt alles door naar je CRM —
-            terwijl jij op de werf staat of onderweg bent.
+            adres en aanvraagdetails — terwijl jij op de werf staat, onderweg bent
+            of gewoon slaapt. Jij belt terug wanneer het jou uitkomt.
           </p>
 
           {/* CTA knoppen */}
@@ -260,8 +260,8 @@ export default async function HomePage() {
               {
                 icon: Users,
                 color: 'bg-amber-100 text-amber-600',
-                title: 'Agency dashboard',
-                desc: 'Beheer meerdere klanten vanuit één overzicht. Onboarding wizard inbegrepen.',
+                title: 'Overzichtelijk dashboard',
+                desc: 'Volg al je gesprekken, leads en afspraken in één helder overzicht. Altijd en overal bereikbaar.',
               },
               {
                 icon: Clock,
@@ -485,10 +485,11 @@ export default async function HomePage() {
           <div className="mb-12 text-center">
             <h2 className="text-3xl font-extrabold text-gray-900">Voor wie is Repto?</h2>
             <p className="mt-3 text-lg text-gray-500">
-              Elke zelfstandige of KMO die WhatsApp-berichten ontvangt en geen leads wil missen.
+              Je bent zelfstandig of hebt een klein bedrijf. Je WhatsApp staat altijd vol —
+              maar je kan niet altijd meteen antwoorden. Dat is precies waarvoor Repto gemaakt is.
             </p>
           </div>
-          <div className="grid grid-cols-3 gap-4 sm:grid-cols-5 lg:grid-cols-9">
+          <div className="grid grid-cols-3 gap-4 sm:grid-cols-4 lg:grid-cols-8">
             {[
               { emoji: '⚡', label: 'Elektriciens' },
               { emoji: '🔧', label: 'Loodgieters' },
@@ -498,7 +499,6 @@ export default async function HomePage() {
               { emoji: '🏡', label: 'Makelaars' },
               { emoji: '🔨', label: 'Renovatie' },
               { emoji: '💆', label: 'Kinesisten' },
-              { emoji: '📱', label: 'Agencies' },
             ].map(s => (
               <div
                 key={s.label}
@@ -509,6 +509,10 @@ export default async function HomePage() {
               </div>
             ))}
           </div>
+          <p className="mt-6 text-center text-sm text-gray-400">
+            Ook voor <span className="font-medium text-gray-500">marketing agencies</span> die meerdere klanten beheren —
+            bekijk het <a href="#prijzen" className="text-indigo-500 hover:underline">Agency-plan</a>.
+          </p>
         </div>
       </section>
 
@@ -590,7 +594,7 @@ export default async function HomePage() {
                 name: 'Groei',
                 price: 99,
                 desc: 'Voor bedrijven met meerdere medewerkers of hogere leadvolumes.',
-                features: ['5 klant-organisaties', '500 gesprekken/maand', 'Airtable CRM', 'Afspraken module', 'Prioriteit support'],
+                features: ['Tot 5 WhatsApp-nummers', '500 gesprekken/maand', 'Airtable CRM', 'Afspraken module', 'Prioriteit support'],
                 popular: true,
               },
               {
@@ -846,7 +850,7 @@ export default async function HomePage() {
             Stop met leads missen via WhatsApp.
           </h2>
           <p className="mt-4 text-lg text-indigo-200">
-            Start vandaag met 7 dagen gratis — verbind je eerste klant in minder dan 10 minuten.
+            Start vandaag met 7 dagen gratis — verbind je WhatsApp-nummer in minder dan 10 minuten.
           </p>
           <Link
             href="/sign-up"
