@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { Zap, ArrowLeft } from 'lucide-react'
 
 export const metadata: Metadata = {
-  title: 'Privacybeleid — Repto',
+  title: 'Privacybeleid',
   description: 'Hoe Repto omgaat met jouw gegevens en klantdata. AVG/GDPR-conform, opgeslagen op Europese servers.',
 }
 

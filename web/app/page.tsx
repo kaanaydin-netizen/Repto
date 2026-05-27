@@ -114,6 +114,21 @@ export default async function HomePage() {
           <p className="mt-8 text-sm text-gray-400">
             ✓ 7 dagen gratis &nbsp;·&nbsp; ✓ Geen verplichtingen &nbsp;·&nbsp; ✓ Live in 10 minuten
           </p>
+
+          {/* Stats — prominent in hero */}
+          <div className="mx-auto mt-10 grid max-w-2xl grid-cols-2 gap-4 sm:grid-cols-4">
+            {[
+              { value: '24/7', label: 'Bereikbaar' },
+              { value: '< 5s', label: 'Reactietijd' },
+              { value: '9+', label: 'Sectoren' },
+              { value: '100%', label: 'Automatisch' },
+            ].map(s => (
+              <div key={s.label} className="rounded-2xl border border-indigo-100 bg-white/80 px-4 py-5 shadow-sm">
+                <p className="text-2xl font-extrabold text-indigo-600">{s.value}</p>
+                <p className="mt-1 text-sm text-gray-500">{s.label}</p>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Dashboard preview */}
@@ -208,25 +223,6 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* ── Stats strip ───────────────────────────────────────────────────── */}
-      <section className="border-y border-gray-100 bg-gray-50 py-10">
-        <div className="mx-auto max-w-5xl px-6">
-          <div className="grid grid-cols-2 gap-8 text-center sm:grid-cols-4">
-            {[
-              { value: '24/7', label: 'Bereikbaar' },
-              { value: '< 5s', label: 'Reactietijd' },
-              { value: '9+', label: 'Sectoren' },
-              { value: '100%', label: 'Automatisch' },
-            ].map(s => (
-              <div key={s.label}>
-                <p className="text-3xl font-extrabold text-indigo-600">{s.value}</p>
-                <p className="mt-1 text-sm text-gray-500">{s.label}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* ── Features ──────────────────────────────────────────────────────── */}
       <section id="features" className="py-24">
         <div className="mx-auto max-w-5xl px-6">
@@ -249,7 +245,7 @@ export default async function HomePage() {
                 icon: Bot,
                 color: 'bg-violet-100 text-violet-600',
                 title: 'Sector-slimme prompts',
-                desc: 'Specifieke AI-configuraties voor installateurs, makelaars, garages, kinesisten en meer.',
+                desc: 'Specifieke AI-configuraties voor installateurs, makelaars, garages, kinesisten en meer. Kies zelf of de AI formeel (u) of informeel (je) communiceert met klanten.',
               },
               {
                 icon: Database,
@@ -627,7 +623,7 @@ export default async function HomePage() {
                 </div>
                 <div className="mt-3 flex items-baseline gap-1">
                   <span className="text-4xl font-extrabold text-gray-900">€{plan.price}</span>
-                  <span className="text-sm text-gray-400">/maand</span>
+                  <span className="text-sm text-gray-400">/maand excl. btw</span>
                 </div>
                 <ul className="my-6 flex-1 space-y-2.5">
                   {plan.features.map(f => (
@@ -648,7 +644,7 @@ export default async function HomePage() {
                   7 dagen gratis starten →
                 </Link>
                 <p className="mt-2 text-center text-[11px] text-gray-400">
-                  Creditcard vereist · daarna €{plan.price}/maand
+                  Betaalmethode vereist · na 7 dagen €{plan.price}/maand excl. btw
                 </p>
               </div>
             ))}
@@ -699,25 +695,25 @@ export default async function HomePage() {
             {[
               {
                 quote: 'Vroeger miste ik bijna elke avondoproep. Nu beantwoordt Repto automatisch en heb ik de volgende ochtend een volledig ingevuld leadformulier. Ik heb al 3 extra jobs per week dankzij Repto.',
-                name: 'Pieter Baert',
-                company: 'Elektricien Baert & Zonen',
+                initials: 'E',
+                role: 'Elektricien',
                 location: 'Gent',
               },
               {
                 quote: 'Als makelaar ontvang ik tientallen WhatsApp-vragen per dag. Repto filtert de serieuze kandidaten eruit en stuurt ze meteen naar mijn Airtable. Mijn agenda is 30% voller geworden.',
-                name: 'Sophie Vandenberghe',
-                company: 'Vastgoed Vandenberghe',
+                initials: 'M',
+                role: 'Makelaar',
                 location: 'Antwerpen',
               },
               {
                 quote: 'Ik stond sceptisch tegenover AI, maar Repto communiceert precies zoals ik dat zou doen. Klanten merken het verschil niet en ik mis geen enkele offerte-aanvraag meer.',
-                name: 'Tom Willems',
-                company: 'Dakwerken Willems',
+                initials: 'D',
+                role: 'Dakwerker',
                 location: 'Brussel',
               },
             ].map(t => (
               <div
-                key={t.name}
+                key={t.role}
                 className="flex flex-col rounded-2xl border border-gray-200 bg-white p-6 shadow-sm"
               >
                 {/* Sterren */}
@@ -731,11 +727,11 @@ export default async function HomePage() {
                 </p>
                 <div className="mt-5 flex items-center gap-3">
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-sm font-bold text-indigo-700">
-                    {t.name[0]}
+                    {t.initials}
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-gray-900">{t.name}</p>
-                    <p className="text-xs text-gray-400">{t.company} · {t.location}</p>
+                    <p className="text-sm font-semibold text-gray-900">{t.role}</p>
+                    <p className="text-xs text-gray-400">{t.location} · early access</p>
                   </div>
                 </div>
               </div>

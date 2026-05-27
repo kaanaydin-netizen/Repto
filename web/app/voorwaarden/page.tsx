@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { Zap, ArrowLeft } from 'lucide-react'
 
 export const metadata: Metadata = {
-  title: 'Algemene Voorwaarden — Repto',
+  title: 'Algemene Voorwaarden',
   description: 'Algemene voorwaarden voor het gebruik van Repto, de AI-receptionist voor KMO\'s.',
 }
 
