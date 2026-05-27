@@ -17,6 +17,36 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 
 
+@router.post("/whatsapp/debug")
+async def debug_webhook(request: Request):
+    """
+    Tijdelijk debug endpoint — voert process_incoming_message SYNCHROON uit
+    en retourneert de fout of het AI-antwoord. VERWIJDEREN na debuggen.
+    """
+    form = await request.form()
+    from_phone   = str(form.get("From", "")).replace("whatsapp:", "")
+    to_phone     = str(form.get("To", ""))
+    body         = str(form.get("Body", "")).strip()
+    contact_name = form.get("ProfileName")
+    message_sid  = form.get("MessageSid")
+
+    if not from_phone or not body:
+        return {"error": "from_phone of body leeg"}
+
+    try:
+        await process_incoming_message(
+            from_phone=from_phone,
+            to_phone=to_phone,
+            body=body,
+            contact_name=contact_name,
+            message_sid=message_sid,
+        )
+        return {"status": "ok", "from": from_phone, "to": to_phone}
+    except Exception as exc:
+        logger.error("Debug webhook fout: %s", exc, exc_info=True)
+        return {"status": "error", "detail": str(exc), "type": type(exc).__name__}
+
+
 @router.post("/whatsapp")
 async def receive_message(
     request: Request,
