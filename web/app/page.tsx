@@ -119,7 +119,7 @@ export default async function HomePage() {
           <div className="mx-auto mt-10 grid max-w-2xl grid-cols-2 gap-4 sm:grid-cols-4">
             {[
               { value: '24/7', label: 'Bereikbaar' },
-              { value: '< 5s', label: 'Reactietijd' },
+              { value: '< 5s', label: 'Gem. reactietijd' },
               { value: '9+', label: 'Sectoren' },
               { value: '100%', label: 'Automatisch' },
             ].map(s => (
@@ -770,7 +770,7 @@ export default async function HomePage() {
               },
               {
                 q: 'Welke CRM-systemen worden ondersteund?',
-                a: 'Momenteel Airtable (volledig). HubSpot en Pipedrive zijn gepland voor Q3 2026. Je kunt ook kiezen voor alleen e-mailnotificaties zonder CRM.',
+                a: 'Momenteel Airtable (volledig). HubSpot en Pipedrive zijn in ontwikkeling en worden later dit jaar toegevoegd. Je kunt ook kiezen voor alleen e-mailnotificaties zonder CRM.',
               },
               {
                 q: 'Hoe lang duurt de installatie?',
@@ -783,6 +783,10 @@ export default async function HomePage() {
               {
                 q: 'Wat als ik wil opzeggen?',
                 a: 'Je kunt op elk moment opzeggen via je accountinstellingen, zonder opzegtermijn. Je wordt nooit langer gefactureerd dan de lopende maand.',
+              },
+              {
+                q: 'Wat als jullie de prijzen aanpassen?',
+                a: 'Bestaande abonnees worden minimaal 30 dagen op voorhand per e-mail verwittigd. Je huidige tarief blijft geldig tot het einde van je lopende facturatieperiode. Akkoord je niet met de nieuwe prijs, dan kan je gewoon opzeggen — zonder extra kosten.',
               },
             ].map(({ q, a }) => (
               <div
