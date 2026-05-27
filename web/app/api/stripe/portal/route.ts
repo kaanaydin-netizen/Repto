@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     }
 
     const stripe = getStripe()
-    const origin = request.headers.get('origin') ?? 'https://repto-three.vercel.app'
+    const origin = request.headers.get('origin') ?? process.env.NEXT_PUBLIC_SITE_URL ?? 'https://repto-three.vercel.app'
 
     const portalSession = await stripe.billingPortal.sessions.create({
       customer: meta.stripeCustomerId,

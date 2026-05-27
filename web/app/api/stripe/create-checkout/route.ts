@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Bepaal origin voor redirect URLs
-    const origin = request.headers.get('origin') ?? 'https://repto-three.vercel.app'
+    const origin = request.headers.get('origin') ?? process.env.NEXT_PUBLIC_SITE_URL ?? 'https://repto-three.vercel.app'
 
     const session = await stripe.checkout.sessions.create({
       customer: customerId,

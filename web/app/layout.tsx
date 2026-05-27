@@ -27,11 +27,11 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: 'Repto' }],
   creator: 'Repto',
-  metadataBase: new URL('https://repto-three.vercel.app'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'https://repto-three.vercel.app'),
   openGraph: {
     type: 'website',
     locale: 'nl_BE',
-    url: 'https://repto-three.vercel.app',
+    url: process.env.NEXT_PUBLIC_SITE_URL ?? 'https://repto-three.vercel.app',
     siteName: 'Repto',
     title: 'Repto — Mis geen enkele offerte-aanvraag meer via WhatsApp',
     description:

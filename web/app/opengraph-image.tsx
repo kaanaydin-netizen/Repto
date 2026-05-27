@@ -1,6 +1,9 @@
 /**
  * Automatisch gegenereerde OG-afbeelding voor social sharing.
  * Next.js App Router serveert dit als /opengraph-image (1200×630px).
+ *
+ * Let op: ImageResponse gebruikt Satori voor rendering — enkel flexbox,
+ * geen backdrop-filter, geen radial-gradient, geen grid.
  */
 import { ImageResponse } from 'next/og'
 
@@ -14,47 +17,46 @@ export default async function Image() {
     (
       <div
         style={{
-          background: 'linear-gradient(135deg, #4338ca 0%, #6d28d9 60%, #4f46e5 100%)',
-          width: '100%',
-          height: '100%',
+          width: '1200px',
+          height: '630px',
+          background: '#4338ca',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          fontFamily: 'system-ui, -apple-system, sans-serif',
+          fontFamily: 'sans-serif',
           padding: '72px 80px',
         }}
       >
-        {/* Logo */}
+        {/* Logo rij */}
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
             gap: '20px',
-            marginBottom: '44px',
+            marginBottom: '40px',
           }}
         >
           <div
             style={{
               width: '72px',
               height: '72px',
-              borderRadius: '20px',
+              borderRadius: '18px',
               background: 'white',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: '36px',
-              boxShadow: '0 4px 24px rgba(0,0,0,0.2)',
+              fontSize: '38px',
             }}
           >
             ⚡
           </div>
           <span
             style={{
-              fontSize: '52px',
+              fontSize: '56px',
               fontWeight: '800',
               color: 'white',
-              letterSpacing: '-1.5px',
+              letterSpacing: '-2px',
             }}
           >
             Repto
@@ -64,18 +66,16 @@ export default async function Image() {
         {/* Headline */}
         <div
           style={{
-            fontSize: '64px',
+            fontSize: '66px',
             fontWeight: '800',
             color: 'white',
             textAlign: 'center',
             lineHeight: '1.15',
             letterSpacing: '-2px',
-            marginBottom: '28px',
-            maxWidth: '960px',
+            marginBottom: '24px',
           }}
         >
           Mis geen enkele
-          <br />
           offerte-aanvraag meer.
         </div>
 
@@ -83,16 +83,16 @@ export default async function Image() {
         <div
           style={{
             fontSize: '30px',
-            color: 'rgba(255,255,255,0.75)',
+            color: 'rgba(255, 255, 255, 0.75)',
             textAlign: 'center',
-            marginBottom: '52px',
+            marginBottom: '48px',
           }}
         >
           WhatsApp AI-receptionist voor Belgische KMO&apos;s
         </div>
 
         {/* Stat badges */}
-        <div style={{ display: 'flex', gap: '28px' }}>
+        <div style={{ display: 'flex', gap: '24px' }}>
           {[
             { value: '24/7', label: 'Bereikbaar' },
             { value: '< 5s', label: 'Gem. reactietijd' },
@@ -102,32 +102,29 @@ export default async function Image() {
             <div
               key={label}
               style={{
-                background: 'rgba(255,255,255,0.15)',
-                border: '1.5px solid rgba(255,255,255,0.3)',
-                borderRadius: '18px',
-                padding: '18px 32px',
+                background: 'rgba(255, 255, 255, 0.15)',
+                border: '1.5px solid rgba(255, 255, 255, 0.3)',
+                borderRadius: '16px',
+                padding: '16px 28px',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
-                gap: '6px',
-                backdropFilter: 'blur(8px)',
+                gap: '4px',
               }}
             >
               <span
                 style={{
-                  fontSize: '34px',
+                  fontSize: '32px',
                   fontWeight: '800',
                   color: 'white',
-                  letterSpacing: '-0.5px',
                 }}
               >
                 {value}
               </span>
               <span
                 style={{
-                  fontSize: '18px',
-                  color: 'rgba(255,255,255,0.65)',
-                  fontWeight: '500',
+                  fontSize: '17px',
+                  color: 'rgba(255, 255, 255, 0.65)',
                 }}
               >
                 {label}

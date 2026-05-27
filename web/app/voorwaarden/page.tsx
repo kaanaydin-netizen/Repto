@@ -50,7 +50,7 @@ export default function VoorwaardenPage() {
               <br />
               E-mail: <a href="mailto:info@repto.be" className="text-indigo-600 underline hover:text-indigo-800">info@repto.be</a>
               <br />
-              Website: <a href="https://repto-three.vercel.app" className="text-indigo-600 underline hover:text-indigo-800">https://repto-three.vercel.app</a>
+              Website: <a href="https://repto.be" className="text-indigo-600 underline hover:text-indigo-800">https://repto.be</a>
             </p>
           </section>
 
