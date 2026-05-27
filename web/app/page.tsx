@@ -48,6 +48,7 @@ export default async function HomePage() {
             <a href="#voorbeeld" className="hover:text-gray-900 transition-colors">Voorbeeld</a>
             <a href="#hoe-werkt-het" className="hover:text-gray-900 transition-colors">Hoe het werkt</a>
             <a href="#prijzen" className="hover:text-gray-900 transition-colors">Prijzen</a>
+            <a href="#faq" className="hover:text-gray-900 transition-colors">FAQ</a>
           </nav>
 
           {/* CTA */}
@@ -109,9 +110,9 @@ export default async function HomePage() {
             </a>
           </div>
 
-          {/* Social proof — consistent: creditcard + 10 minuten */}
+          {/* Social proof strip */}
           <p className="mt-8 text-sm text-gray-400">
-            ✓ 7 dagen gratis &nbsp;·&nbsp; ✓ Creditcard vereist &nbsp;·&nbsp; ✓ Live in 10 minuten
+            ✓ 7 dagen gratis &nbsp;·&nbsp; ✓ Geen verplichtingen &nbsp;·&nbsp; ✓ Live in 10 minuten
           </p>
         </div>
 
@@ -582,7 +583,7 @@ export default async function HomePage() {
                 name: 'Starter',
                 price: 49,
                 desc: 'Voor zelfstandigen die hun eigen WhatsApp willen automatiseren.',
-                features: ['1 klant-organisatie', '200 gesprekken/maand', 'Airtable CRM', 'E-mail support'],
+                features: ['Jouw bedrijf (1 WhatsApp-nummer)', '200 gesprekken/maand', 'Airtable CRM', 'E-mail support'],
                 popular: false,
               },
               {
@@ -681,9 +682,12 @@ export default async function HomePage() {
       <section className="bg-gray-50 py-24">
         <div className="mx-auto max-w-5xl px-6">
           <div className="mb-14 text-center">
-            <h2 className="text-3xl font-extrabold text-gray-900">Wat klanten zeggen</h2>
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
+              ✨ Early access gebruikers
+            </div>
+            <h2 className="text-3xl font-extrabold text-gray-900">Wat onze pilotgebruikers zeggen</h2>
             <p className="mt-3 text-lg text-gray-500">
-              Echte KMO&apos;s, echte resultaten.
+              KMO&apos;s die als eerste toegang kregen tot Repto.
             </p>
           </div>
 
@@ -737,7 +741,7 @@ export default async function HomePage() {
       </section>
 
       {/* ── FAQ ──────────────────────────────────────────────────────────── */}
-      <section className="bg-white py-24">
+      <section id="faq" className="bg-white py-24">
         <div className="mx-auto max-w-5xl px-6">
           <div className="mb-14 text-center">
             <h2 className="text-3xl font-extrabold text-gray-900">Veelgestelde vragen</h2>
@@ -753,24 +757,32 @@ export default async function HomePage() {
                 a: 'Repto is getraind op jouw sector en instructies. Je kunt elk gesprek live volgen en op elk moment overnemen. De AI laat duidelijk weten dat een medewerker zal terugbellen voor complexe vragen.',
               },
               {
+                q: 'Werkt dit met mijn bestaande WhatsApp-nummer?',
+                a: 'Repto werkt via WhatsApp Business. Je koppelt je bestaand zakelijk nummer in de onboarding wizard. Heb je nog geen WhatsApp Business? We begeleiden je stap voor stap bij de aanvraag.',
+              },
+              {
                 q: 'Kan ik het gesprek overnemen?',
                 a: 'Ja, met één klik in je dashboard kun je elk gesprek overnemen. De AI pauzeert automatisch zodra jij reageert.',
               },
               {
+                q: 'Kan ik de AI eerst testen voor klanten ermee in contact komen?',
+                a: 'Ja. Tijdens de gratis trial heb je toegang tot een testnummer waarmee je zelf gesprekken kunt simuleren. Zo stel je alles in op jouw manier voor je live gaat.',
+              },
+              {
                 q: 'Welke CRM-systemen worden ondersteund?',
-                a: 'Momenteel Airtable (volledig). HubSpot en Pipedrive zijn gepland voor Q3 2025. Je kunt ook kiezen voor alleen e-mailnotificaties zonder CRM.',
+                a: 'Momenteel Airtable (volledig). HubSpot en Pipedrive zijn gepland voor Q3 2026. Je kunt ook kiezen voor alleen e-mailnotificaties zonder CRM.',
               },
               {
                 q: 'Hoe lang duurt de installatie?',
                 a: 'Gemiddeld 10 minuten. Je koppelt je WhatsApp Business-nummer, configureert de AI en je bent live. Geen technische kennis vereist.',
               },
               {
-                q: 'Wat als ik wil opzeggen?',
-                a: 'Je kunt op elk moment opzeggen via je accountinstellingen, zonder opzegtermijn. Je wordt nooit langer gefactureerd dan de lopende maand.',
+                q: 'Wat als ik meer gesprekken heb dan mijn plan toelaat?',
+                a: 'Je ontvangt een melding bij 80% gebruik. Overschot wordt afgerekend aan een vast tarief per gesprek, of je upgradet eenvoudig naar een hoger plan. Je wordt nooit plots afgesneden.',
               },
               {
-                q: 'Is mijn klantdata veilig?',
-                a: 'Alle data wordt opgeslagen op Europese servers. Conversaties worden versleuteld bewaard en nooit gedeeld met derden. Je blijft altijd eigenaar van je data.',
+                q: 'Wat als ik wil opzeggen?',
+                a: 'Je kunt op elk moment opzeggen via je accountinstellingen, zonder opzegtermijn. Je wordt nooit langer gefactureerd dan de lopende maand.',
               },
             ].map(({ q, a }) => (
               <div
@@ -781,6 +793,48 @@ export default async function HomePage() {
                 <p className="mt-2 text-sm leading-relaxed text-gray-500">{a}</p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── GDPR / Data & Privacy ─────────────────────────────────────────── */}
+      <section className="bg-indigo-50 py-20">
+        <div className="mx-auto max-w-4xl px-6">
+          <div className="flex flex-col items-center gap-8 text-center sm:flex-row sm:text-left">
+            {/* Icon */}
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-indigo-600 shadow-md">
+              <Shield className="h-8 w-8 text-white" />
+            </div>
+
+            {/* Tekst */}
+            <div className="flex-1">
+              <h2 className="text-2xl font-extrabold text-gray-900">
+                Jouw data blijft van jou — en blijft in Europa.
+              </h2>
+              <p className="mt-3 text-base leading-relaxed text-gray-600">
+                Alle gesprekken en klantgegevens worden opgeslagen op <strong>Europese servers</strong> (EU-regio).
+                Repto verwerkt gegevens conform de <strong>AVG / GDPR</strong>-wetgeving.
+                Conversaties worden <strong>versleuteld</strong> bewaard en <strong>nooit gedeeld</strong> met derden.
+                Jij bent en blijft de eigenaar van alle data — je kunt alles op elk moment exporteren of verwijderen.
+              </p>
+            </div>
+
+            {/* Chips */}
+            <div className="flex shrink-0 flex-col gap-2 sm:items-end">
+              {[
+                '🇪🇺 EU-servers',
+                '🔒 Versleuteld',
+                '✅ AVG-conform',
+                '🗑️ Recht op verwijdering',
+              ].map(label => (
+                <span
+                  key={label}
+                  className="inline-flex items-center rounded-full border border-indigo-200 bg-white px-3 py-1 text-xs font-semibold text-indigo-700 shadow-sm"
+                >
+                  {label}
+                </span>
+              ))}
+            </div>
           </div>
         </div>
       </section>
@@ -801,7 +855,7 @@ export default async function HomePage() {
             7 dagen gratis starten <ArrowRight className="h-5 w-5" />
           </Link>
           <p className="mt-4 text-sm text-indigo-300">
-            ✓ 7 dagen gratis &nbsp;·&nbsp; ✓ Creditcard vereist &nbsp;·&nbsp; ✓ Opzeggen wanneer je wil
+            ✓ 7 dagen gratis &nbsp;·&nbsp; ✓ Geen verplichtingen &nbsp;·&nbsp; ✓ Opzeggen wanneer je wil
           </p>
         </div>
       </section>
@@ -817,10 +871,13 @@ export default async function HomePage() {
               <span className="font-bold text-gray-900">Repto</span>
               <span className="text-sm text-gray-400">— AI-receptionist voor KMO's</span>
             </div>
-            <div className="flex items-center gap-6 text-sm text-gray-400">
+            <div className="flex flex-wrap items-center gap-4 text-sm text-gray-400">
               <Link href="/sign-in" className="hover:text-gray-700">Aanmelden</Link>
               <a href="#prijzen" className="hover:text-gray-700">Prijzen</a>
-              <span>© 2025 Repto</span>
+              <a href="#faq" className="hover:text-gray-700">FAQ</a>
+              <Link href="/privacy" className="hover:text-gray-700">Privacybeleid</Link>
+              <Link href="/voorwaarden" className="hover:text-gray-700">Algemene voorwaarden</Link>
+              <span>© 2026 Repto</span>
             </div>
           </div>
         </div>
