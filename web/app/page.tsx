@@ -223,6 +223,73 @@ export default async function HomePage() {
         </div>
       </section>
 
+      {/* ── Demo video ───────────────────────────────────────────────────── */}
+      <section className="bg-gray-50 py-20">
+        <div className="mx-auto max-w-4xl px-6">
+          <div className="mb-10 text-center">
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">
+              ▶ Bekijk de demo
+            </div>
+            <h2 className="text-3xl font-extrabold text-gray-900">Van WhatsApp-bericht tot lead in 60 seconden</h2>
+            <p className="mt-3 text-lg text-gray-500">
+              Zie hoe Repto automatisch antwoordt, de klant kwalificeert en de lead opslaat — terwijl jij slaapt.
+            </p>
+          </div>
+
+          {/* Video container — swap de src in zodra de video klaar is */}
+          {/* Gebruik YouTube: src="https://www.youtube.com/embed/JOUW_VIDEO_ID?autoplay=0&rel=0" */}
+          {/* Gebruik Vimeo:   src="https://player.vimeo.com/video/JOUW_VIDEO_ID" */}
+          <div className="overflow-hidden rounded-2xl border border-gray-200 shadow-xl shadow-gray-200">
+            {/* Placeholder — verwijder dit blok en uncomment de iframe zodra de video live is */}
+            <div className="relative flex aspect-video w-full items-center justify-center bg-gradient-to-br from-indigo-900 via-indigo-800 to-violet-900">
+              {/* Achtergrond ruis-patroon */}
+              <div className="pointer-events-none absolute inset-0 opacity-10"
+                style={{ backgroundImage: 'radial-gradient(circle, #fff 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
+
+              {/* Play knop */}
+              <div className="flex flex-col items-center gap-5">
+                <div className="flex h-20 w-20 cursor-pointer items-center justify-center rounded-full bg-white/20 ring-4 ring-white/30 backdrop-blur-sm transition-transform hover:scale-110">
+                  <div className="ml-1.5 h-0 w-0 border-y-[14px] border-l-[22px] border-y-transparent border-l-white" />
+                </div>
+                <div className="text-center">
+                  <p className="text-base font-semibold text-white">Demo video — binnenkort beschikbaar</p>
+                  <p className="mt-1 text-sm text-indigo-300">Wordt opgenomen · 60 seconden</p>
+                </div>
+              </div>
+
+              {/* Stats overlay onderaan */}
+              <div className="absolute bottom-0 left-0 right-0 flex justify-center gap-6 bg-black/30 px-6 py-3 backdrop-blur-sm">
+                {[
+                  { value: '60s', label: 'Video' },
+                  { value: '21:43', label: 'Avondlead' },
+                  { value: '< 5s', label: 'AI-reactie' },
+                  { value: '100%', label: 'Automatisch' },
+                ].map(s => (
+                  <div key={s.label} className="text-center">
+                    <p className="text-sm font-bold text-white">{s.value}</p>
+                    <p className="text-[10px] text-indigo-300">{s.label}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* ── UNCOMMENT DIT ZODRA VIDEO KLAAR IS ──────────────────────────
+            <iframe
+              className="aspect-video w-full"
+              src="https://www.youtube.com/embed/JOUW_VIDEO_ID?rel=0&modestbranding=1"
+              title="Repto demo — van WhatsApp-bericht tot lead in 60 seconden"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+            ─────────────────────────────────────────────────────────────── */}
+          </div>
+
+          <p className="mt-4 text-center text-sm text-gray-400">
+            Herkenbaar? <a href="/sign-up" className="font-medium text-indigo-600 hover:underline">Start 7 dagen gratis →</a>
+          </p>
+        </div>
+      </section>
+
       {/* ── Features ──────────────────────────────────────────────────────── */}
       <section id="features" className="py-24">
         <div className="mx-auto max-w-5xl px-6">
