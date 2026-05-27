@@ -9,7 +9,7 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc, func
 from app.database import get_db
-from app.models.conversation import Conversation, Message
+from app.models.conversation import Conversation, Message, Appointment
 
 router = APIRouter(prefix="/conversations", tags=["conversations"])
 
@@ -43,9 +43,10 @@ class MessageOut(BaseModel):
 
 class StatsOut(BaseModel):
     total_conversations: int
-    new_leads: int
-    closed_today: int
-    crm_synced: int
+    active_conversations: int
+    closed_conversations: int
+    confirmed_appointments: int
+    new_leads_today: int
 
 
 # ─── Endpoints ────────────────────────────────────────────────────────────────
@@ -62,34 +63,43 @@ async def get_stats(
         select(func.count(Conversation.id)).where(Conversation.org_id == org_id)
     )
 
-    # Nieuwe leads (status = 'new')
-    new_leads = await db.scalar(
-        select(func.count(Conversation.id))
-        .where(Conversation.org_id == org_id, Conversation.status == "new")
-    )
-
-    # Gesloten vandaag
-    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
-    closed_today = await db.scalar(
+    # Actieve gesprekken (status: new of in_progress)
+    active = await db.scalar(
         select(func.count(Conversation.id))
         .where(
             Conversation.org_id == org_id,
-            Conversation.status == "closed",
-            Conversation.updated_at >= today_start,
+            Conversation.status.in_(["new", "in_progress"]),
         )
     )
 
-    # CRM gesynchroniseerd
-    crm_synced = await db.scalar(
+    # Gesloten gesprekken
+    closed = await db.scalar(
         select(func.count(Conversation.id))
-        .where(Conversation.org_id == org_id, Conversation.crm_synced_at.isnot(None))
+        .where(Conversation.org_id == org_id, Conversation.status == "closed")
+    )
+
+    # Afspraken (confirmed)
+    appointments = await db.scalar(
+        select(func.count(Appointment.id))
+        .where(Appointment.org_id == org_id, Appointment.status == "confirmed")
+    )
+
+    # Nieuwe leads vandaag
+    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    today_leads = await db.scalar(
+        select(func.count(Conversation.id))
+        .where(
+            Conversation.org_id == org_id,
+            Conversation.created_at >= today_start,
+        )
     )
 
     return StatsOut(
         total_conversations=total or 0,
-        new_leads=new_leads or 0,
-        closed_today=closed_today or 0,
-        crm_synced=crm_synced or 0,
+        active_conversations=active or 0,
+        closed_conversations=closed or 0,
+        confirmed_appointments=appointments or 0,
+        new_leads_today=today_leads or 0,
     )
 
 

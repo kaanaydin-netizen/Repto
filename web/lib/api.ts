@@ -35,10 +35,10 @@ export const api = {
         `/conversations/${id}/status?status=${status}`,
         { method: 'PATCH' }
       ),
-  },
 
-  stats: (orgId: string) =>
-    fetcher<DashboardStats>(`/conversations/stats?org_id=${orgId}`),
+    stats: (orgId: string) =>
+      fetcher<DashboardStats>(`/conversations/stats?org_id=${orgId}`),
+  },
 
   appointments: {
     list: (orgId: string, status?: string) =>

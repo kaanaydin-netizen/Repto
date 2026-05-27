@@ -1,21 +1,25 @@
-import { MessageSquare, UserPlus, CheckCircle2, RefreshCw } from 'lucide-react'
+import { MessageSquare, Activity, CheckCircle2, CalendarCheck, RefreshCw } from 'lucide-react'
 import StatCard from '@/components/StatCard'
 import ConversationCard from '@/components/ConversationCard'
 import { api } from '@/lib/api'
 import { getOrgId } from '@/lib/org'
+import type { DashboardStats } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
+
+const defaultStats: DashboardStats = {
+  total_conversations: 0,
+  active_conversations: 0,
+  closed_conversations: 0,
+  confirmed_appointments: 0,
+  new_leads_today: 0,
+}
 
 export default async function DashboardPage() {
   const ORG_ID = await getOrgId()
 
   const [stats, conversations, org] = await Promise.all([
-    api.stats(ORG_ID).catch(() => ({
-      total_conversations: 0,
-      new_leads: 0,
-      closed_today: 0,
-      crm_synced: 0,
-    })),
+    api.conversations.stats(ORG_ID).catch(() => defaultStats),
     api.conversations.list(ORG_ID).catch(() => []),
     ORG_ID ? api.organizations.get(ORG_ID).catch(() => null) : Promise.resolve(null),
   ])
@@ -35,6 +39,11 @@ export default async function DashboardPage() {
               'Live overzicht van je gesprekken en leads.'
             )}
           </p>
+          {stats.new_leads_today > 0 && (
+            <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-amber-100 px-3 py-1 text-sm font-medium text-amber-800">
+              🔥 {stats.new_leads_today} nieuwe leads vandaag
+            </span>
+          )}
         </div>
         <a
           href="/dashboard"
@@ -48,31 +57,31 @@ export default async function DashboardPage() {
       {/* Stats */}
       <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
-          title="Totaal gesprekken"
+          title="Gesprekken totaal"
           value={stats.total_conversations}
           sub="alle tijd"
           icon={MessageSquare}
           color="indigo"
         />
         <StatCard
-          title="Nieuwe leads"
-          value={stats.new_leads}
-          sub="wachten op opvolging"
-          icon={UserPlus}
+          title="Actief"
+          value={stats.active_conversations}
+          sub="nieuw of in behandeling"
+          icon={Activity}
           color="amber"
         />
         <StatCard
-          title="Gesloten vandaag"
-          value={stats.closed_today}
-          sub="gesprekken afgerond"
+          title="Gesloten"
+          value={stats.closed_conversations}
+          sub="afgeronde gesprekken"
           icon={CheckCircle2}
           color="green"
         />
         <StatCard
-          title="CRM gesynchroniseerd"
-          value={stats.crm_synced}
-          sub="leads in Airtable"
-          icon={RefreshCw}
+          title="Afspraken"
+          value={stats.confirmed_appointments}
+          sub="bevestigd"
+          icon={CalendarCheck}
           color="blue"
         />
       </div>

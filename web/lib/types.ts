@@ -34,9 +34,10 @@ export interface Appointment {
 
 export interface DashboardStats {
   total_conversations: number
-  new_leads: number
-  closed_today: number
-  crm_synced: number
+  active_conversations: number
+  closed_conversations: number
+  confirmed_appointments: number
+  new_leads_today: number
 }
 
 export interface Organization {

@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Building2, Bot, Phone, Database, Pencil,
-         MessageSquare, UserPlus, CheckCircle2, RefreshCw } from 'lucide-react'
+         MessageSquare, Activity, CheckCircle2, CalendarCheck } from 'lucide-react'
 import { api } from '@/lib/api'
 
 export const dynamic = 'force-dynamic'
@@ -49,11 +49,12 @@ export default async function KlantDetailPage({ params }: { params: Promise<{ id
   // Laad org + stats parallel
   const [org, stats] = await Promise.all([
     api.organizations.get(id).catch(() => null),
-    api.stats(id).catch(() => ({
+    api.conversations.stats(id).catch(() => ({
       total_conversations: 0,
-      new_leads: 0,
-      closed_today: 0,
-      crm_synced: 0,
+      active_conversations: 0,
+      closed_conversations: 0,
+      confirmed_appointments: 0,
+      new_leads_today: 0,
     })),
   ])
 
@@ -100,23 +101,23 @@ export default async function KlantDetailPage({ params }: { params: Promise<{ id
             bg: 'bg-indigo-50',
           },
           {
-            icon: UserPlus,
-            label: 'Nieuwe leads',
-            value: stats.new_leads,
+            icon: Activity,
+            label: 'Actief',
+            value: stats.active_conversations,
             color: 'text-amber-600',
             bg: 'bg-amber-50',
           },
           {
             icon: CheckCircle2,
-            label: 'Gesloten vandaag',
-            value: stats.closed_today,
+            label: 'Gesloten',
+            value: stats.closed_conversations,
             color: 'text-green-600',
             bg: 'bg-green-50',
           },
           {
-            icon: RefreshCw,
-            label: 'CRM gesynchroniseerd',
-            value: stats.crm_synced,
+            icon: CalendarCheck,
+            label: 'Afspraken',
+            value: stats.confirmed_appointments,
             color: 'text-blue-600',
             bg: 'bg-blue-50',
           },
