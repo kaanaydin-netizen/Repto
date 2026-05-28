@@ -8,7 +8,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Zap, MessageSquare, Database, Bot, ArrowRight, Check } from 'lucide-react'
 
-export const metadata = { title: 'Welkom bij Repto' }
+export const metadata = { title: 'Welkom' }
 export const dynamic = 'force-dynamic'
 
 export default async function OnboardingPage() {

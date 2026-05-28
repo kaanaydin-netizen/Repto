@@ -27,16 +27,18 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: 'Repto' }],
   creator: 'Repto',
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'https://repto-three.vercel.app'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'https://repto.be'),
   openGraph: {
     type: 'website',
     locale: 'nl_BE',
-    url: process.env.NEXT_PUBLIC_SITE_URL ?? 'https://repto-three.vercel.app',
+    url: process.env.NEXT_PUBLIC_SITE_URL ?? 'https://repto.be',
     siteName: 'Repto',
     title: 'Repto — Mis geen enkele offerte-aanvraag meer via WhatsApp',
     description:
       'AI-receptionist die automatisch WhatsApp-berichten beantwoordt, leads verzamelt en naar Airtable stuurt. 7 dagen gratis proberen.',
-    // og-image wordt automatisch gegenereerd via app/opengraph-image.tsx
+    images: [
+      { url: '/og-image.png', width: 1200, height: 630, alt: 'Repto — AI-Receptionist voor KMO\'s' },
+    ],
   },
   twitter: {
     card: 'summary_large_image',
