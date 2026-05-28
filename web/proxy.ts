@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 // Tijdelijk: pass-through om Clerk Edge-probleem te isoleren
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   return NextResponse.next()
 }
 

@@ -36,15 +36,13 @@ export const metadata: Metadata = {
     title: 'Repto — Mis geen enkele offerte-aanvraag meer via WhatsApp',
     description:
       'AI-receptionist die automatisch WhatsApp-berichten beantwoordt, leads verzamelt en naar Airtable stuurt. 7 dagen gratis proberen.',
-    images: [
-      { url: '/og-image.png', width: 1200, height: 630, alt: 'Repto — AI-Receptionist voor KMO\'s' },
-    ],
+    // og:image wordt automatisch geïnjecteerd via app/opengraph-image.tsx (1200×630)
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Repto — AI-Receptionist voor KMO\'s',
     description: 'Mis geen enkele offerte-aanvraag meer via WhatsApp.',
-    // twitter-image wordt automatisch gegenereerd via app/twitter-image.tsx
+    // twitter:image valt automatisch terug op de opengraph-image route
   },
   robots: {
     index: true,
