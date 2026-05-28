@@ -17,7 +17,7 @@ settings = get_settings()
 logger = logging.getLogger(__name__)
 
 RESEND_API_URL = "https://api.resend.com/emails"
-DASHBOARD_URL  = "https://repto-three.vercel.app"
+DASHBOARD_URL  = "https://repto.be"
 
 
 async def send_lead_notification(conversation: Conversation, db: AsyncSession) -> None:
