@@ -24,7 +24,8 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy import select
 from app.models.conversation import Organization
 
-TWILIO_FROM = "whatsapp:+14155238886"
+# Meta phone_number_id van de te updaten organisatie (uit env, val terug op placeholder)
+PHONE_NUMBER_ID = os.environ.get("WHATSAPP_PHONE_NUMBER_ID", "")
 
 DATABASE_URL = os.environ.get("DATABASE_URL", "")
 if not DATABASE_URL:
@@ -48,16 +49,19 @@ AsyncSessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=F
 
 
 async def update_org():
+    if not PHONE_NUMBER_ID:
+        print("❌ Stel WHATSAPP_PHONE_NUMBER_ID in als omgevingsvariabele")
+        return
     async with AsyncSessionLocal() as db:
         result = await db.execute(
             select(Organization).where(
-                Organization.whatsapp_phone_number_id == TWILIO_FROM
+                Organization.whatsapp_phone_number_id == PHONE_NUMBER_ID
             )
         )
         org = result.scalar_one_or_none()
 
         if not org:
-            print(f"❌ Geen organisatie gevonden voor {TWILIO_FROM}")
+            print(f"❌ Geen organisatie gevonden voor phone_number_id {PHONE_NUMBER_ID}")
             return
 
         print(f"✅ Organisatie gevonden: {org.name} (id: {org.id})")

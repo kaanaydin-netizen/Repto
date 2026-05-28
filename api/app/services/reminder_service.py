@@ -1,19 +1,23 @@
 """
 Reminder Service — stuurt WhatsApp-herinneringen voor aankomende afspraken.
 Wordt elk uur aangeroepen via APScheduler (zie main.py).
-Stuurt een herinnering 24 uur voor de afspraak via de Twilio WhatsApp sandbox.
+
+Een herinnering valt doorgaans buiten het 24u-klantvenster van WhatsApp en wordt
+daarom verstuurd via een vooraf goedgekeurde Meta message-template
+(zie settings.whatsapp_reminder_template). De template moet 3 body-placeholders
+hebben, in volgorde: {{1}} contactnaam, {{2}} bedrijfsnaam, {{3}} datum/tijd.
 """
 from __future__ import annotations
 import logging
 from datetime import datetime, timedelta
 
-import httpx
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.database import AsyncSessionLocal
 from app.models.conversation import Appointment, Conversation, Organization
+from app.services.whatsapp_service import WhatsAppService
 
 settings = get_settings()
 logger = logging.getLogger(__name__)
@@ -21,11 +25,6 @@ logger = logging.getLogger(__name__)
 # Venster: 23h – 25h vanaf nu (zodat we elke uur runnen zonder dubbele reminders)
 REMINDER_WINDOW_MIN_H = 23
 REMINDER_WINDOW_MAX_H = 25
-
-TWILIO_SMS_URL = (
-    f"https://api.twilio.com/2010-04-01/Accounts/"
-    f"{settings.twilio_account_sid}/Messages.json"
-)
 
 
 async def send_appointment_reminders() -> None:
@@ -91,43 +90,40 @@ async def _send_reminder(appt: Appointment, db: AsyncSession) -> None:
 
     contact_phone = conversation.wa_contact_phone
     contact_name = conversation.wa_contact_name or "Beste klant"
-
     start_formatted = appt.start_at.strftime("%A %d %B om %H:%M")
 
-    message = (
-        f"📅 Herinnering van {org_name}\n\n"
-        f"Goedendag {contact_name},\n\n"
-        f"We herinneren u eraan dat u morgen een afspraak heeft:\n"
-        f"*{appt.title}*\n"
-        f"📆 {start_formatted}\n\n"
-        f"Kan u niet aanwezig zijn? Stuur ons gerust een bericht om te verzetten."
-    )
-
-    # Stuur via Twilio WhatsApp
-    async with httpx.AsyncClient(timeout=10) as client:
-        resp = await client.post(
-            TWILIO_SMS_URL,
-            auth=(settings.twilio_account_sid, settings.twilio_auth_token),
-            data={
-                "From": settings.twilio_whatsapp_from,
-                "To": f"whatsapp:{contact_phone}",
-                "Body": message,
-            },
+    # Afzendernummer van de organisatie; valt anders terug op de default uit settings
+    sender_phone_number_id = org.whatsapp_phone_number_id if org else None
+    if not sender_phone_number_id:
+        logger.warning(
+            "Org %s heeft geen whatsapp_phone_number_id — gebruik default afzender.",
+            appt.org_id,
         )
 
-    if resp.status_code in (200, 201):
-        appt.reminder_sent = True
-        await db.commit()
-        logger.info(
-            "Herinnering verstuurd: afspraak=%s | contact=%s | start=%s",
-            appt.id,
-            contact_phone,
-            appt.start_at.isoformat(),
+    # Buiten het 24u-venster → via goedgekeurde Meta-template.
+    # Body-placeholders in volgorde: {{1}} naam, {{2}} bedrijf, {{3}} datum/tijd.
+    wa = WhatsAppService(db)
+    try:
+        await wa.send_template_message(
+            to_phone=contact_phone,
+            template_name=settings.whatsapp_reminder_template,
+            language_code=settings.whatsapp_reminder_template_lang,
+            body_params=[contact_name, org_name, start_formatted],
+            phone_number_id=sender_phone_number_id,
         )
-    else:
+    except Exception as exc:
+        # Niet als verstuurd markeren → volgende run probeert opnieuw
+        # (typisch tot de template in Meta is goedgekeurd).
         logger.error(
-            "Twilio fout bij herinnering afspraak=%s: HTTP %s — %s",
-            appt.id,
-            resp.status_code,
-            resp.text[:200],
+            "Meta template-herinnering mislukt voor afspraak=%s: %s", appt.id, exc
         )
+        return
+
+    appt.reminder_sent = True
+    await db.commit()
+    logger.info(
+        "Herinnering verstuurd: afspraak=%s | contact=%s | start=%s",
+        appt.id,
+        contact_phone,
+        appt.start_at.isoformat(),
+    )

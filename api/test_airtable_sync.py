@@ -1,5 +1,5 @@
 """
-Test de Airtable sync rechtstreeks — zonder Twilio of WhatsApp.
+Test de Airtable sync rechtstreeks — zonder WhatsApp-verkeer.
 Maakt een nep-gesprek aan in de Railway DB en synchroniseert het naar Airtable.
 
 Gebruik:
@@ -19,10 +19,9 @@ import uuid
 sys.path.insert(0, os.path.dirname(__file__))
 
 # Zet env vars voordat settings worden geladen
-os.environ.setdefault("TWILIO_ACCOUNT_SID",    "ACtest")
-os.environ.setdefault("TWILIO_AUTH_TOKEN",      "testtoken")
-os.environ.setdefault("TWILIO_WHATSAPP_FROM",   "whatsapp:+14155238886")
-os.environ.setdefault("WHATSAPP_VERIFY_TOKEN",  "test")
+os.environ.setdefault("WHATSAPP_ACCESS_TOKEN",   "test-token")
+os.environ.setdefault("WHATSAPP_PHONE_NUMBER_ID", "123456789")
+os.environ.setdefault("WHATSAPP_VERIFY_TOKEN",    "test")
 
 DATABASE_URL = os.environ.get("DATABASE_URL", "")
 if not DATABASE_URL:
@@ -48,7 +47,8 @@ async def run():
         # Test-org ophalen
         result = await db.execute(
             select(Organization).where(
-                Organization.whatsapp_phone_number_id == "whatsapp:+14155238886"
+                Organization.whatsapp_phone_number_id
+                == os.environ["WHATSAPP_PHONE_NUMBER_ID"]
             )
         )
         org = result.scalar_one_or_none()

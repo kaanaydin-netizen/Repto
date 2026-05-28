@@ -1,6 +1,6 @@
 """
 Seed script voor lokale development.
-Maakt een test-organisatie aan die gekoppeld is aan het Twilio sandbox nummer.
+Maakt een test-organisatie aan die gekoppeld is aan het Meta phone_number_id.
 
 Gebruik:
     cd /Users/kaanaydin/Desktop/Antigravity/Repto/api
@@ -32,7 +32,7 @@ async def seed():
         from sqlalchemy import select
         existing = await db.execute(
             select(Organization).where(
-                Organization.whatsapp_phone_number_id == settings.twilio_whatsapp_from
+                Organization.whatsapp_phone_number_id == settings.whatsapp_phone_number_id
             )
         )
         org = existing.scalar_one_or_none()
@@ -46,7 +46,7 @@ async def seed():
             id=str(uuid.uuid4()),
             name="Test Installateur BV",
             sector="installateur",
-            whatsapp_phone_number_id=settings.twilio_whatsapp_from,
+            whatsapp_phone_number_id=settings.whatsapp_phone_number_id,
             ai_tone="vriendelijk",
             crm_type="none",
         )
