@@ -222,6 +222,31 @@ APPOINTMENT_TOOL: dict = {
 }
 
 
+_NL_DAGEN = ["maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag", "zondag"]
+_NL_MAANDEN = [
+    "januari", "februari", "maart", "april", "mei", "juni",
+    "juli", "augustus", "september", "oktober", "november", "december",
+]
+
+
+def _date_context() -> str:
+    """
+    Geef de AI de huidige datum mee, zodat relatieve datums ('morgen',
+    'volgende dinsdag', '3 juni' zonder jaar) correct én in de toekomst worden
+    berekend. Zonder deze context raadt het model het jaar (bv. 2025 i.p.v. 2026).
+    """
+    now = datetime.now()
+    datum = f"{_NL_DAGEN[now.weekday()]} {now.day} {_NL_MAANDEN[now.month - 1]} {now.year}"
+    return (
+        f"\n\n---\nHUIDIGE DATUM: vandaag is het {datum}. "
+        "Gebruik deze datum om relatieve verwijzingen ('vandaag', 'morgen', 'overmorgen', "
+        "'volgende week', 'volgende dinsdag', of een dag/maand zonder jaartal) correct te "
+        "berekenen. Een afspraak ligt ALTIJD in de toekomst — gebruik nooit een datum in het "
+        "verleden, en vul bij create_appointment altijd het volledige jaar in op basis van "
+        "deze huidige datum.\n"
+    )
+
+
 def build_system_prompt(org: Organization) -> str:
     """
     Bouw het systeem-bericht op basis van de organisatie-configuratie.
@@ -235,7 +260,7 @@ def build_system_prompt(org: Organization) -> str:
         tone=org.ai_tone or "professioneel",
         company_info=org.ai_system_prompt or "",
     )
-    return base + CLOSING_INSTRUCTION
+    return base + _date_context() + CLOSING_INSTRUCTION
 
 
 class AIService:
