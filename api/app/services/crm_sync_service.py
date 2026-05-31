@@ -234,18 +234,19 @@ class CrmSyncService:
         has_appointment = len(appointments) > 0
 
         first_contact = conversation.created_at or datetime.now()
+        # Type werk + samenvatting samengevoegd in één veld (formaat "Type werk — samenvatting").
+        samenvatting = _combine_type_en_samenvatting(lead.get("type_werk"), lead.get("samenvatting"))
         lead_fields = {
             "Bron ID": conversation.id,
             "Naam": lead.get("naam") or conversation.wa_contact_name or "Onbekend",
             "Telefoon": conversation.wa_contact_phone,
             "Adres": lead.get("adres") or "",
             "E-mail": lead.get("email") or "",
-            "Type Werk": lead.get("type_werk") or "",
             "Gewenste Datum": lead.get("gewenste_datum") or "",
             "Status": _pipeline_status(conversation, has_appointment, lead),
             "Intentie": lead.get("intentie") or "Anders",
             "Urgentie": lead.get("urgentie") or "",
-            "Samenvatting": lead.get("samenvatting") or "",
+            "Samenvatting": samenvatting,
             "Eerste contact": first_contact.isoformat(),
             "Laatste update": datetime.now().isoformat(),
         }
@@ -422,6 +423,16 @@ def _str_or_none(val) -> str | None:
         return None
     s = str(val).strip()
     return s if s and s.lower() not in ("null", "none", "") else None
+
+
+def _combine_type_en_samenvatting(type_werk, samenvatting) -> str:
+    """Voeg type werk en samenvatting samen tot één veld: 'Type werk — samenvatting'.
+    Valt terug op wat beschikbaar is als er maar één van beide is."""
+    t = _str_or_none(type_werk)
+    s = _str_or_none(samenvatting)
+    if t and s:
+        return f"{t} — {s}"
+    return t or s or ""
 
 
 def _normalize_urgentie(val) -> str | None:
