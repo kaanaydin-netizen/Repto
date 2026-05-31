@@ -197,9 +197,11 @@ class CrmSyncService:
     async def _sync_airtable(self, conversation: Conversation, org: Organization) -> str:
         """
         Synchroniseer het gesprek naar Airtable als relationeel mini-CRM.
-        Fase 1: verrijkte Leads-tabel (status-pijplijn, intentie, samenvatting).
-        Afspraken/Opvolgingen worden in latere fases toegevoegd.
-        crm_credentials_encrypted bevat: {"api_key": "pat...", "base_id": "app...", "table_name": "Leads"}
+        - Leads: verrijkte tabel (status-pijplijn, intentie, samenvatting).
+        - Afspraken: één record per DB-afspraak, gekoppeld aan de Lead.
+        - Opvolgingen: één record wanneer de AI opvolging nodig acht.
+        crm_credentials_encrypted bevat: {"api_key": "pat...", "base_id": "app...",
+          "table_name": "Leads", "appointments_table": "Afspraken", "followups_table": "Opvolgingen"}
         """
         if not org.crm_credentials_encrypted:
             raise ValueError("crm_credentials_encrypted niet geconfigureerd")
@@ -208,6 +210,8 @@ class CrmSyncService:
         api_key = config.get("api_key")
         base_id = config.get("base_id")
         leads_table = config.get("table_name", "Leads")
+        appointments_table = config.get("appointments_table", "Afspraken")
+        followups_table = config.get("followups_table", "Opvolgingen")
         if not api_key or not base_id:
             raise ValueError("api_key en base_id zijn verplicht in crm_credentials_encrypted")
 
@@ -220,7 +224,7 @@ class CrmSyncService:
         all_messages = list(msgs_result.scalars().all())
         lead = await self._extract_lead_data(all_messages)
 
-        # Afspraken van dit gesprek bepalen mee de pijplijn-status (sync zelf in fase 2)
+        # Afspraken van dit gesprek bepalen mee de pijplijn-status én worden zelf gesynct.
         appt_result = await self.db.execute(
             select(Appointment).where(Appointment.conversation_id == conversation.id)
         )
@@ -234,6 +238,7 @@ class CrmSyncService:
             "Telefoon": conversation.wa_contact_phone,
             "Adres": lead.get("adres") or "",
             "Type Werk": lead.get("type_werk") or "",
+            "Gewenste Datum": lead.get("gewenste_datum") or "",
             "Status": _pipeline_status(conversation, has_appointment, lead),
             "Intentie": lead.get("intentie") or "Anders",
             "Urgentie": lead.get("urgentie") or "",
@@ -247,9 +252,43 @@ class CrmSyncService:
                 client, base_id, api_key, leads_table, ["Bron ID"], lead_fields
             )
 
+            # Afspraken syncen — de Lead-link vult automatisch het omgekeerde
+            # "Afspraken"-veld op het Lead-record (bidirectionele link).
+            appt_count = 0
+            for appt in appointments:
+                appt_fields = {
+                    "Titel": appt.title or "Afspraak",
+                    "Bron ID": appt.id,
+                    "Lead": [lead_record_id],
+                    "Start": appt.start_at.isoformat() if appt.start_at else None,
+                    "Einde": appt.end_at.isoformat() if appt.end_at else None,
+                    "Status": _appointment_status(appt.status),
+                }
+                appt_fields = {k: v for k, v in appt_fields.items() if v is not None}
+                await self._airtable_upsert(
+                    client, base_id, api_key, appointments_table, ["Bron ID"], appt_fields
+                )
+                appt_count += 1
+
+            # Opvolging syncen (één per gesprek) wanneer de AI dit nodig acht.
+            followup_synced = False
+            if lead.get("opvolging_nodig"):
+                followup_fields = {
+                    "Reden": lead.get("opvolg_reden") or "Opvolging nodig",
+                    "Bron ID": conversation.id,
+                    "Lead": [lead_record_id],
+                    "Opvolgdatum": lead.get("opvolg_datum"),
+                }
+                followup_fields = {k: v for k, v in followup_fields.items() if v is not None}
+                await self._airtable_upsert(
+                    client, base_id, api_key, followups_table, ["Bron ID"], followup_fields
+                )
+                followup_synced = True
+
         logger.info(
             f"📋 Airtable Lead upsert: {lead_fields['Naam']} | status={lead_fields['Status']} | "
-            f"intentie={lead_fields['Intentie']} → {lead_record_id}"
+            f"intentie={lead_fields['Intentie']} | afspraken={appt_count} | "
+            f"opvolging={'ja' if followup_synced else 'nee'} → {lead_record_id}"
         )
         return lead_record_id
 
@@ -330,6 +369,16 @@ def _empty_lead() -> dict:
 
 _INTENTIES = {"offerte": "Offerte", "afspraak": "Afspraak", "info": "Info",
               "klacht": "Klacht", "anders": "Anders"}
+
+_APPOINTMENT_STATUS = {"confirmed": "Bevestigd", "cancelled": "Geannuleerd",
+                       "completed": "Afgerond", "pending": "Voorlopig"}
+
+
+def _appointment_status(val) -> str:
+    """Map de interne afspraak-status naar een NL single-select-keuze in Airtable."""
+    if val is None:
+        return "Bevestigd"
+    return _APPOINTMENT_STATUS.get(str(val).strip().lower(), "Bevestigd")
 
 
 def _normalize_intentie(val) -> str:
