@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import get_settings
 from app.database import AsyncSessionLocal
 from app.models.conversation import Appointment, Conversation, Organization
+from app.services.ai_service import _NL_DAGEN, _NL_MAANDEN
 from app.services.whatsapp_service import WhatsAppService
 
 settings = get_settings()
@@ -90,7 +91,9 @@ async def _send_reminder(appt: Appointment, db: AsyncSession) -> None:
 
     contact_phone = conversation.wa_contact_phone
     contact_name = conversation.wa_contact_name or "Beste klant"
-    start_formatted = appt.start_at.strftime("%A %d %B om %H:%M")
+    # NL-datum (strftime %A/%B zou Engelse namen geven zonder locale).
+    s = appt.start_at
+    start_formatted = f"{_NL_DAGEN[s.weekday()]} {s.day} {_NL_MAANDEN[s.month - 1]} om {s:%H:%M}"
 
     # Afzendernummer van de organisatie; valt anders terug op de default uit settings
     sender_phone_number_id = org.whatsapp_phone_number_id if org else None
