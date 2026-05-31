@@ -73,6 +73,26 @@ def _serialize_crm(crm_type: str, airtable: Optional[AirtableCredentials]) -> Op
     return None
 
 
+def _resolve_crm_credentials(
+    current: Optional[str],
+    crm_type: str,
+    airtable: Optional[AirtableCredentials],
+) -> Optional[str]:
+    """
+    Bepaal crm_credentials_encrypted bij een organisatie-update.
+
+    - Een ander CRM-type dan airtable (bv. 'none') → credentials wissen.
+    - Airtable mét nieuwe credentials → overschrijven.
+    - Airtable zónder nieuwe credentials → bestaande behouden (de UI laat het
+      tokenveld bewust leeg = "niet wijzigen"). Voorheen werden ze hier gewist.
+    """
+    if crm_type != "airtable":
+        return None
+    if airtable:
+        return _serialize_crm("airtable", airtable)
+    return current
+
+
 # ─── Endpoints ────────────────────────────────────────────────────────────────
 
 @router.get("/", response_model=list[OrganizationOut])
@@ -150,8 +170,10 @@ async def update_organization(
     if data.whatsapp_phone_number_id is not None:
         org.whatsapp_phone_number_id = data.whatsapp_phone_number_id
     if data.crm_type is not None:
+        org.crm_credentials_encrypted = _resolve_crm_credentials(
+            org.crm_credentials_encrypted, data.crm_type, data.airtable
+        )
         org.crm_type = data.crm_type
-        org.crm_credentials_encrypted = _serialize_crm(data.crm_type, data.airtable)
 
     await db.commit()
     await db.refresh(org)
