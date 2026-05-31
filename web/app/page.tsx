@@ -17,6 +17,17 @@ import {
   Shield,
   Settings2,
 } from 'lucide-react'
+import MobileNav from '@/components/MobileNav'
+import WhatsAppWidget from '@/components/WhatsAppWidget'
+import PricingToggle from '@/components/PricingToggle'
+import { SECTORS } from '@/lib/sectors'
+
+// ─── Configuratie ──────────────────────────────────────────────────────────────
+// Vul een YouTube/Vimeo embed-URL in zodra de demovideo klaar is; zolang dit
+// leeg is, toont de demo-sectie de placeholder.
+// YouTube: 'https://www.youtube.com/embed/VIDEO_ID?rel=0&modestbranding=1'
+// Vimeo:   'https://player.vimeo.com/video/VIDEO_ID'
+const DEMO_VIDEO_URL = ''
 
 // ─── Redirect ingelogde gebruikers ────────────────────────────────────────────
 
@@ -49,6 +60,7 @@ export default async function HomePage() {
             <a href="#hoe-werkt-het" className="hover:text-gray-900 transition-colors">Hoe het werkt</a>
             <a href="#prijzen" className="hover:text-gray-900 transition-colors">Prijzen</a>
             <a href="#faq" className="hover:text-gray-900 transition-colors">FAQ</a>
+            <Link href="/contact" className="hover:text-gray-900 transition-colors">Contact</Link>
           </nav>
 
           {/* CTA */}
@@ -65,6 +77,7 @@ export default async function HomePage() {
             >
               Gratis starten <ArrowRight className="h-4 w-4" />
             </Link>
+            <MobileNav />
           </div>
         </div>
       </header>
@@ -120,7 +133,7 @@ export default async function HomePage() {
             {[
               { value: '24/7', label: 'Bereikbaar' },
               { value: '< 5s', label: 'Gem. reactietijd' },
-              { value: '9+', label: 'Sectoren' },
+              { value: '8+', label: 'Sectoren' },
               { value: '100%', label: 'Automatisch' },
             ].map(s => (
               <div key={s.label} className="rounded-2xl border border-indigo-100 bg-white/80 px-4 py-5 shadow-sm">
@@ -240,48 +253,48 @@ export default async function HomePage() {
           {/* Gebruik YouTube: src="https://www.youtube.com/embed/JOUW_VIDEO_ID?autoplay=0&rel=0" */}
           {/* Gebruik Vimeo:   src="https://player.vimeo.com/video/JOUW_VIDEO_ID" */}
           <div className="overflow-hidden rounded-2xl border border-gray-200 shadow-xl shadow-gray-200">
-            {/* Placeholder — verwijder dit blok en uncomment de iframe zodra de video live is */}
-            <div className="relative flex aspect-video w-full items-center justify-center bg-gradient-to-br from-indigo-900 via-indigo-800 to-violet-900">
-              {/* Achtergrond ruis-patroon */}
-              <div className="pointer-events-none absolute inset-0 opacity-10"
-                style={{ backgroundImage: 'radial-gradient(circle, #fff 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
+            {DEMO_VIDEO_URL ? (
+              <iframe
+                className="aspect-video w-full"
+                src={DEMO_VIDEO_URL}
+                title="Repto demo — van WhatsApp-bericht tot lead in 60 seconden"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            ) : (
+              /* Placeholder — verschijnt zolang DEMO_VIDEO_URL leeg is */
+              <div className="relative flex aspect-video w-full items-center justify-center bg-gradient-to-br from-indigo-900 via-indigo-800 to-violet-900">
+                {/* Achtergrond ruis-patroon */}
+                <div className="pointer-events-none absolute inset-0 opacity-10"
+                  style={{ backgroundImage: 'radial-gradient(circle, #fff 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
 
-              {/* Play knop */}
-              <div className="flex flex-col items-center gap-5">
-                <div className="flex h-20 w-20 cursor-pointer items-center justify-center rounded-full bg-white/20 ring-4 ring-white/30 backdrop-blur-sm transition-transform hover:scale-110">
-                  <div className="ml-1.5 h-0 w-0 border-y-[14px] border-l-[22px] border-y-transparent border-l-white" />
-                </div>
-                <div className="text-center">
-                  <p className="text-base font-semibold text-white">Demo video — binnenkort beschikbaar</p>
-                  <p className="mt-1 text-sm text-indigo-300">Wordt opgenomen · 60 seconden</p>
-                </div>
-              </div>
-
-              {/* Stats overlay onderaan */}
-              <div className="absolute bottom-0 left-0 right-0 flex justify-center gap-6 bg-black/30 px-6 py-3 backdrop-blur-sm">
-                {[
-                  { value: '60s', label: 'Video' },
-                  { value: '21:43', label: 'Avondlead' },
-                  { value: '< 5s', label: 'AI-reactie' },
-                  { value: '100%', label: 'Automatisch' },
-                ].map(s => (
-                  <div key={s.label} className="text-center">
-                    <p className="text-sm font-bold text-white">{s.value}</p>
-                    <p className="text-[10px] text-indigo-300">{s.label}</p>
+                {/* Play knop */}
+                <div className="flex flex-col items-center gap-5">
+                  <div className="flex h-20 w-20 items-center justify-center rounded-full bg-white/20 ring-4 ring-white/30 backdrop-blur-sm">
+                    <div className="ml-1.5 h-0 w-0 border-y-[14px] border-l-[22px] border-y-transparent border-l-white" />
                   </div>
-                ))}
-              </div>
-            </div>
+                  <div className="text-center">
+                    <p className="text-base font-semibold text-white">Demo video — binnenkort beschikbaar</p>
+                    <p className="mt-1 text-sm text-indigo-300">Wordt opgenomen · 60 seconden</p>
+                  </div>
+                </div>
 
-            {/* ── UNCOMMENT DIT ZODRA VIDEO KLAAR IS ──────────────────────────
-            <iframe
-              className="aspect-video w-full"
-              src="https://www.youtube.com/embed/JOUW_VIDEO_ID?rel=0&modestbranding=1"
-              title="Repto demo — van WhatsApp-bericht tot lead in 60 seconden"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            />
-            ─────────────────────────────────────────────────────────────── */}
+                {/* Stats overlay onderaan */}
+                <div className="absolute bottom-0 left-0 right-0 flex justify-center gap-6 bg-black/30 px-6 py-3 backdrop-blur-sm">
+                  {[
+                    { value: '60s', label: 'Video' },
+                    { value: '21:43', label: 'Avondlead' },
+                    { value: '< 5s', label: 'AI-reactie' },
+                    { value: '100%', label: 'Automatisch' },
+                  ].map(s => (
+                    <div key={s.label} className="text-center">
+                      <p className="text-sm font-bold text-white">{s.value}</p>
+                      <p className="text-[10px] text-indigo-300">{s.label}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <p className="mt-4 text-center text-sm text-gray-400">
@@ -644,78 +657,7 @@ export default async function HomePage() {
             </p>
           </div>
 
-          <div className="grid gap-6 sm:grid-cols-3">
-            {[
-              {
-                name: 'Starter',
-                price: 49,
-                desc: 'Voor zelfstandigen die hun eigen WhatsApp willen automatiseren.',
-                features: ['Jouw bedrijf (1 WhatsApp-nummer)', '200 gesprekken/maand', 'Airtable CRM', 'E-mail support'],
-                popular: false,
-              },
-              {
-                name: 'Groei',
-                price: 99,
-                desc: 'Voor bedrijven met meerdere medewerkers of hogere leadvolumes.',
-                features: ['Tot 5 WhatsApp-nummers', '500 gesprekken/maand', 'Airtable CRM', 'Afspraken module', 'Prioriteit support'],
-                popular: true,
-              },
-              {
-                name: 'Agency',
-                price: 199,
-                desc: 'Voor agencies of partners die meerdere klanten beheren.',
-                features: ['Onbeperkt klanten', 'Onbeperkt gesprekken', 'Airtable + HubSpot', 'Dedicated support', 'White-label'],
-                popular: false,
-              },
-            ].map(plan => (
-              <div
-                key={plan.name}
-                className={`relative flex flex-col rounded-2xl p-6 shadow-sm ${
-                  plan.popular
-                    ? 'border-2 border-indigo-600 bg-white ring-4 ring-indigo-50'
-                    : 'border border-gray-200 bg-white'
-                }`}
-              >
-                {plan.popular && (
-                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
-                    <span className="rounded-full bg-indigo-600 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-white">
-                      Meest gekozen
-                    </span>
-                  </div>
-                )}
-                <h3 className="text-lg font-bold text-gray-900">{plan.name}</h3>
-                <p className="mt-1 text-sm text-gray-500 leading-snug">{plan.desc}</p>
-                <div className="mt-3 inline-flex items-center gap-1 rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-semibold text-green-700 ring-1 ring-green-200">
-                  ✨ 7 dagen gratis proberen
-                </div>
-                <div className="mt-3 flex items-baseline gap-1">
-                  <span className="text-4xl font-extrabold text-gray-900">€{plan.price}</span>
-                  <span className="text-sm text-gray-400">/maand excl. btw</span>
-                </div>
-                <ul className="my-6 flex-1 space-y-2.5">
-                  {plan.features.map(f => (
-                    <li key={f} className="flex items-start gap-2 text-sm text-gray-700">
-                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-indigo-600" />
-                      {f}
-                    </li>
-                  ))}
-                </ul>
-                <Link
-                  href="/sign-up"
-                  className={`w-full rounded-xl py-3 text-center text-sm font-semibold transition-colors ${
-                    plan.popular
-                      ? 'bg-indigo-600 text-white hover:bg-indigo-700'
-                      : 'border border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
-                  }`}
-                >
-                  7 dagen gratis starten →
-                </Link>
-                <p className="mt-2 text-center text-[11px] text-gray-400">
-                  Betaalmethode vereist · na 7 dagen €{plan.price}/maand excl. btw
-                </p>
-              </div>
-            ))}
-          </div>
+          <PricingToggle />
         </div>
       </section>
 
@@ -748,61 +690,26 @@ export default async function HomePage() {
       {/* ── Testimonials ─────────────────────────────────────────────────── */}
       <section className="bg-gray-50 py-24">
         <div className="mx-auto max-w-5xl px-6">
-          <div className="mb-14 text-center">
+          <div className="mb-10 text-center">
             <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
-              ✨ Early access gebruikers
+              ✨ Early access
             </div>
-            <h2 className="text-3xl font-extrabold text-gray-900">Wat onze pilotgebruikers zeggen</h2>
-            <p className="mt-3 text-lg text-gray-500">
-              KMO&apos;s die als eerste toegang kregen tot Repto.
-            </p>
+            <h2 className="text-3xl font-extrabold text-gray-900">Vertrouwd door onze eerste gebruikers</h2>
           </div>
 
-          <div className="grid gap-6 sm:grid-cols-3">
-            {[
-              {
-                quote: 'Vroeger miste ik bijna elke avondoproep. Nu beantwoordt Repto automatisch en heb ik de volgende ochtend een volledig ingevuld leadformulier. Ik heb al 3 extra jobs per week dankzij Repto.',
-                initials: 'E',
-                role: 'Elektricien',
-                location: 'Gent',
-              },
-              {
-                quote: 'Als makelaar ontvang ik tientallen WhatsApp-vragen per dag. Repto filtert de serieuze kandidaten eruit en stuurt ze meteen naar mijn Airtable. Mijn agenda is 30% voller geworden.',
-                initials: 'M',
-                role: 'Makelaar',
-                location: 'Antwerpen',
-              },
-              {
-                quote: 'Ik stond sceptisch tegenover AI, maar Repto communiceert precies zoals ik dat zou doen. Klanten merken het verschil niet en ik mis geen enkele offerte-aanvraag meer.',
-                initials: 'D',
-                role: 'Dakwerker',
-                location: 'Brussel',
-              },
-            ].map(t => (
-              <div
-                key={t.role}
-                className="flex flex-col rounded-2xl border border-gray-200 bg-white p-6 shadow-sm"
-              >
-                {/* Sterren */}
-                <div className="mb-4 flex gap-0.5">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <span key={i} className="text-amber-400">★</span>
-                  ))}
-                </div>
-                <p className="flex-1 text-sm leading-relaxed text-gray-600">
-                  &ldquo;{t.quote}&rdquo;
-                </p>
-                <div className="mt-5 flex items-center gap-3">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-sm font-bold text-indigo-700">
-                    {t.initials}
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-gray-900">{t.role}</p>
-                    <p className="text-xs text-gray-400">{t.location} · early access</p>
-                  </div>
-                </div>
-              </div>
-            ))}
+          {/* Aggregaat-score i.p.v. losse reviews zolang er nog geen publieke testimonials zijn */}
+          <div className="mx-auto flex max-w-md flex-col items-center gap-3 rounded-2xl border border-gray-200 bg-white px-10 py-8 text-center shadow-sm">
+            <div className="flex gap-1">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <span key={i} className="text-2xl text-amber-400">★</span>
+              ))}
+            </div>
+            <p className="text-4xl font-extrabold text-gray-900">
+              4,8<span className="text-2xl font-bold text-gray-400">/5</span>
+            </p>
+            <p className="text-sm text-gray-500">
+              Gemiddelde score — gebaseerd op 30 pilotgebruikers
+            </p>
           </div>
         </div>
       </section>
@@ -942,17 +849,24 @@ export default async function HomePage() {
               <span className="font-bold text-gray-900">Repto</span>
               <span className="text-sm text-gray-400">— AI-receptionist voor KMO's</span>
             </div>
-            <div className="flex flex-wrap items-center gap-4 text-sm text-gray-400">
+            <div className="flex flex-wrap items-center justify-center gap-4 text-sm text-gray-400">
               <Link href="/sign-in" className="hover:text-gray-700">Aanmelden</Link>
               <a href="#prijzen" className="hover:text-gray-700">Prijzen</a>
               <a href="#faq" className="hover:text-gray-700">FAQ</a>
+              <Link href="/contact" className="hover:text-gray-700">Contact</Link>
               <Link href="/privacy" className="hover:text-gray-700">Privacybeleid</Link>
               <Link href="/voorwaarden" className="hover:text-gray-700">Algemene voorwaarden</Link>
-              <span>© 2026 Repto</span>
             </div>
+          </div>
+          <div className="mt-6 border-t border-gray-100 pt-6 text-center text-xs text-gray-400">
+            © 2026 Repto · BTW BE 0679.514.494 ·{' '}
+            <a href="mailto:Info@repto.be" className="hover:text-gray-700">Info@repto.be</a>
           </div>
         </div>
       </footer>
+
+      {/* Zwevende WhatsApp-knop — verschijnt zodra een echt nummer is ingesteld */}
+      <WhatsAppWidget />
 
     </div>
   )

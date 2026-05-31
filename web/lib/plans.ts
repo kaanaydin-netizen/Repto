@@ -3,10 +3,14 @@
  * Bevat geen Stripe dependency zodat het veilig is op build time.
  */
 
+// Jaarlijkse facturatie ≈ 2 maanden gratis. priceAnnualPerMonth = getoonde
+// prijs/maand wanneer jaarlijks gefactureerd. Echte checkout vereist
+// aparte jaarlijkse Stripe-prijzen (env vars STRIPE_PRICE_*_ANNUAL).
 export const PLANS = {
   starter: {
     name: 'Starter',
     price: 49,
+    priceAnnualPerMonth: 41,
     klanten: 1,
     gesprekken: '200/maand',
     features: [
@@ -20,6 +24,7 @@ export const PLANS = {
   groei: {
     name: 'Groei',
     price: 99,
+    priceAnnualPerMonth: 83,
     klanten: 5,
     gesprekken: '500/maand',
     popular: true,
@@ -35,6 +40,7 @@ export const PLANS = {
   agency: {
     name: 'Agency',
     price: 199,
+    priceAnnualPerMonth: 166,
     klanten: Infinity,
     gesprekken: 'Onbeperkt',
     features: [
