@@ -33,7 +33,7 @@ def test_pipeline_status_closed_varianten():
 def test_pipeline_status_open_gesprek():
     from app.services.crm_sync_service import _pipeline_status
 
-    assert _pipeline_status(SimpleNamespace(status="in_progress"), False, {}) == "In gesprek"
+    assert _pipeline_status(SimpleNamespace(status="in_progress"), False, {}) == "In behandeling"
     assert _pipeline_status(SimpleNamespace(status="new"), False, {}) == "Nieuw"
 
 
@@ -44,8 +44,8 @@ def test_appointment_status_mapping():
 
     assert _appointment_status("confirmed") == "Bevestigd"
     assert _appointment_status("CANCELLED") == "Geannuleerd"
-    assert _appointment_status("completed") == "Afgerond"
-    assert _appointment_status("pending") == "Voorlopig"
+    assert _appointment_status("completed") == "Voltooid"
+    assert _appointment_status("pending") == "Bevestigd"
     assert _appointment_status(None) == "Bevestigd"
     assert _appointment_status("onbekend") == "Bevestigd"
 
@@ -64,10 +64,14 @@ def test_normalize_intentie():
 def test_normalize_urgentie():
     from app.services.crm_sync_service import _normalize_urgentie
 
-    assert _normalize_urgentie("ja") == "ja"
-    assert _normalize_urgentie("dringend") == "ja"
-    assert _normalize_urgentie("nee") == "nee"
-    assert _normalize_urgentie("normaal") == "nee"
+    assert _normalize_urgentie("Laag") == "Laag"
+    assert _normalize_urgentie("normaal") == "Normaal"
+    assert _normalize_urgentie("Hoog") == "Hoog"
+    assert _normalize_urgentie("spoed") == "Spoed"
+    # terugwaartse compatibiliteit met oude ja/nee-waarden
+    assert _normalize_urgentie("ja") == "Hoog"
+    assert _normalize_urgentie("dringend") == "Hoog"
+    assert _normalize_urgentie("nee") == "Normaal"
     assert _normalize_urgentie("misschien") is None
     assert _normalize_urgentie(None) is None
 

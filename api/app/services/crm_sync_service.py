@@ -130,9 +130,10 @@ class CrmSyncService:
                     "sleutels (gebruik null bij onbekend), geen extra tekst:\n"
                     "- naam: naam van de klant (string of null)\n"
                     "- adres: adres/locatie van de interventie of het bezoek (string of null)\n"
+                    "- email: e-mailadres van de klant (string of null)\n"
                     "- type_werk: type werk, dienst of vraag (string of null)\n"
                     "- gewenste_datum: door de klant gewenste datum of tijdstip (string of null)\n"
-                    "- urgentie: is het dringend? Gebruik exact 'ja', 'nee', of null\n"
+                    "- urgentie: hoe dringend? Gebruik exact 'Laag', 'Normaal', 'Hoog', 'Spoed', of null\n"
                     "- intentie: één van 'Offerte', 'Afspraak', 'Info', 'Klacht', 'Anders'\n"
                     "- samenvatting: korte samenvatting van het gesprek in 1 à 2 zinnen (string)\n"
                     "- opvolging_nodig: true als de klant later opnieuw gecontacteerd moet worden "
@@ -153,6 +154,7 @@ class CrmSyncService:
             return {
                 "naam": _str_or_none(data.get("naam")),
                 "adres": _str_or_none(data.get("adres")),
+                "email": _str_or_none(data.get("email")),
                 "type_werk": _str_or_none(data.get("type_werk")),
                 "gewenste_datum": _str_or_none(data.get("gewenste_datum")),
                 "urgentie": _normalize_urgentie(data.get("urgentie")),
@@ -237,6 +239,7 @@ class CrmSyncService:
             "Naam": lead.get("naam") or conversation.wa_contact_name or "Onbekend",
             "Telefoon": conversation.wa_contact_phone,
             "Adres": lead.get("adres") or "",
+            "E-mail": lead.get("email") or "",
             "Type Werk": lead.get("type_werk") or "",
             "Gewenste Datum": lead.get("gewenste_datum") or "",
             "Status": _pipeline_status(conversation, has_appointment, lead),
@@ -360,7 +363,7 @@ class CrmSyncService:
 
 def _empty_lead() -> dict:
     return {
-        "naam": None, "adres": None, "type_werk": None,
+        "naam": None, "adres": None, "email": None, "type_werk": None,
         "gewenste_datum": None, "urgentie": None,
         "intentie": "Anders", "samenvatting": None,
         "opvolging_nodig": False, "opvolg_reden": None, "opvolg_datum": None,
@@ -371,7 +374,7 @@ _INTENTIES = {"offerte": "Offerte", "afspraak": "Afspraak", "info": "Info",
               "klacht": "Klacht", "anders": "Anders"}
 
 _APPOINTMENT_STATUS = {"confirmed": "Bevestigd", "cancelled": "Geannuleerd",
-                       "completed": "Afgerond", "pending": "Voorlopig"}
+                       "completed": "Voltooid", "pending": "Bevestigd"}
 
 
 def _appointment_status(val) -> str:
@@ -391,7 +394,7 @@ def _normalize_intentie(val) -> str:
 def _pipeline_status(conversation: Conversation, has_appointment: bool, lead: dict) -> str:
     """
     Map de interne gespreksstatus + context naar de Airtable-pijplijn (single select).
-    Fases: Nieuw · In gesprek · Afspraak gepland · Offerte verstuurd · Op te volgen ·
+    Fases: Nieuw · In behandeling · Afspraak gepland · Offerte verstuurd · Op te volgen ·
     Gewonnen · Verloren.
     """
     status = conversation.status
@@ -409,7 +412,7 @@ def _pipeline_status(conversation: Conversation, has_appointment: bool, lead: di
         return "Gewonnen"
 
     if status == "in_progress":
-        return "In gesprek"
+        return "In behandeling"
 
     return "Nieuw"
 
@@ -422,11 +425,17 @@ def _str_or_none(val) -> str | None:
 
 
 def _normalize_urgentie(val) -> str | None:
+    """Map de urgentie naar exact één van Laag/Normaal/Hoog/Spoed (of None).
+    Accepteert ook de oude 'ja'/'nee'-waarden voor terugwaartse compatibiliteit."""
     if val is None:
         return None
     s = str(val).strip().lower()
-    if s in ("ja", "yes", "dringend", "urgent", "true"):
-        return "ja"
-    if s in ("nee", "no", "niet dringend", "normaal", "false"):
-        return "nee"
-    return None
+    mapping = {
+        "laag": "Laag", "low": "Laag",
+        "normaal": "Normaal", "normal": "Normaal", "niet dringend": "Normaal",
+        "nee": "Normaal", "no": "Normaal", "false": "Normaal",
+        "hoog": "Hoog", "high": "Hoog", "dringend": "Hoog",
+        "ja": "Hoog", "yes": "Hoog", "true": "Hoog",
+        "spoed": "Spoed", "urgent": "Spoed",
+    }
+    return mapping.get(s)
