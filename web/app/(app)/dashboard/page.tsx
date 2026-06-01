@@ -127,10 +127,11 @@ export default async function DashboardPage() {
               ⚠️
             </div>
             <div>
-              <p className="font-semibold text-amber-900">ORG_ID niet ingesteld</p>
+              <p className="font-semibold text-amber-900">Nog geen organisatie gekoppeld</p>
               <p className="mt-0.5 text-sm text-amber-700">
-                Stel <code className="rounded bg-amber-100 px-1 font-mono text-xs">NEXT_PUBLIC_ORG_ID</code> in
-                als omgevingsvariabele om je organisatie te koppelen.
+                Maak een klant aan via de{' '}
+                <a href="/klanten/nieuw" className="font-medium underline">onboarding wizard</a>{' '}
+                om je dashboard te vullen.
               </p>
             </div>
           </div>
