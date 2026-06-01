@@ -38,10 +38,16 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS — laat het Next.js dashboard toe
+# CORS — laat het Next.js dashboard toe (productie + lokaal + de geconfigureerde URL)
+_allowed_origins = list({
+    settings.frontend_url,
+    "https://repto.be",
+    "https://www.repto.be",
+    "http://localhost:3000",
+})
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.frontend_url],
+    allow_origins=_allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

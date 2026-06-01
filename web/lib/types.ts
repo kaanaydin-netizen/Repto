@@ -49,6 +49,7 @@ export interface Organization {
   whatsapp_number: string | null
   whatsapp_phone_number_id: string | null
   crm_type: string
+  clerk_user_id?: string | null
   created_at: string | null
 }
 

@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.database import get_db
 from app.models.conversation import Organization
+from app.auth import get_current_user_id, require_org_access, auth_is_active
 
 router = APIRouter(prefix="/organizations", tags=["organizations"])
 
@@ -58,6 +59,7 @@ class OrganizationOut(BaseModel):
     whatsapp_number: Optional[str]
     whatsapp_phone_number_id: Optional[str]
     crm_type: str
+    clerk_user_id: Optional[str] = None  # nodig zodat de frontend ongeclaimde orgs herkent
     created_at: Optional[datetime] = None
 
 
@@ -97,13 +99,17 @@ def _resolve_crm_credentials(
 
 @router.get("/", response_model=list[OrganizationOut])
 async def list_organizations(
-    clerk_user_id: Optional[str] = None,
+    user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ):
-    """Haal organisaties op. Filter op clerk_user_id als opgegeven (multi-tenant)."""
+    """
+    Haal organisaties op voor de ingelogde gebruiker.
+    Auth aan: strikt gefilterd op clerk_user_id uit het token.
+    Auth uit (legacy): alle organisaties.
+    """
     query = select(Organization).order_by(Organization.name)
-    if clerk_user_id:
-        query = query.where(Organization.clerk_user_id == clerk_user_id)
+    if auth_is_active():
+        query = query.where(Organization.clerk_user_id == user_id)
     result = await db.execute(query)
     return result.scalars().all()
 
@@ -111,9 +117,15 @@ async def list_organizations(
 @router.post("/", response_model=OrganizationOut, status_code=201)
 async def create_organization(
     data: OrganizationCreate,
+    user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ):
-    """Maak een nieuwe klant-organisatie aan."""
+    """
+    Maak een nieuwe klant-organisatie aan.
+    De eigenaar (clerk_user_id) komt uit het geverifieerde token — NIET uit de
+    request body (anders kan een aanvaller een org op andermans naam zetten).
+    """
+    owner = user_id if auth_is_active() else data.clerk_user_id
     org = Organization(
         id=str(uuid.uuid4()),
         name=data.name,
@@ -124,7 +136,7 @@ async def create_organization(
         whatsapp_phone_number_id=data.whatsapp_phone_number_id,
         crm_type=data.crm_type,
         crm_credentials_encrypted=_serialize_crm(data.crm_type, data.airtable),
-        clerk_user_id=data.clerk_user_id,
+        clerk_user_id=owner,
     )
     db.add(org)
     await db.commit()
@@ -132,30 +144,49 @@ async def create_organization(
     return org
 
 
-@router.get("/{org_id}", response_model=OrganizationOut)
-async def get_organization(
+@router.post("/{org_id}/claim", response_model=OrganizationOut)
+async def claim_organization(
     org_id: str,
+    user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ):
-    """Haal één organisatie op."""
+    """
+    Eenmalige claim: koppel een nog-ongeclaimde org aan de ingelogde gebruiker.
+    Alleen toegestaan als clerk_user_id nog NULL is — zo kan de bestaande
+    geseede org één keer aan de eerste eigenaar gehangen worden zonder DB-werk.
+    """
     result = await db.execute(select(Organization).where(Organization.id == org_id))
     org = result.scalar_one_or_none()
     if not org:
         raise HTTPException(status_code=404, detail="Organisatie niet gevonden")
+    if org.clerk_user_id and org.clerk_user_id != user_id:
+        raise HTTPException(status_code=403, detail="Deze organisatie is al geclaimd")
+    if auth_is_active():
+        org.clerk_user_id = user_id
+        await db.commit()
+        await db.refresh(org)
     return org
+
+
+@router.get("/{org_id}", response_model=OrganizationOut)
+async def get_organization(
+    org_id: str,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """Haal één organisatie op (alleen eigen org bij auth aan)."""
+    return await require_org_access(org_id, user_id, db)
 
 
 @router.patch("/{org_id}", response_model=OrganizationOut)
 async def update_organization(
     org_id: str,
     data: OrganizationUpdate,
+    user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ):
-    """Pas een bestaande organisatie aan."""
-    result = await db.execute(select(Organization).where(Organization.id == org_id))
-    org = result.scalar_one_or_none()
-    if not org:
-        raise HTTPException(status_code=404, detail="Organisatie niet gevonden")
+    """Pas een bestaande organisatie aan (alleen eigen org bij auth aan)."""
+    org = await require_org_access(org_id, user_id, db)
 
     if data.name is not None:
         org.name = data.name

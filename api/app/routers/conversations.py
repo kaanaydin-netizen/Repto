@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc, func
 from app.database import get_db
 from app.models.conversation import Conversation, Message, Appointment
+from app.auth import get_current_user_id, require_org_access
 
 router = APIRouter(prefix="/conversations", tags=["conversations"])
 
@@ -51,12 +52,31 @@ class StatsOut(BaseModel):
 
 # ─── Endpoints ────────────────────────────────────────────────────────────────
 
+async def _require_conversation(
+    conversation_id: str,
+    user_id: str,
+    db: AsyncSession,
+) -> Conversation:
+    """Haal een gesprek op en verifieer dat de org bij de gebruiker hoort."""
+    result = await db.execute(
+        select(Conversation).where(Conversation.id == conversation_id)
+    )
+    conv = result.scalar_one_or_none()
+    if not conv:
+        raise HTTPException(status_code=404, detail="Gesprek niet gevonden")
+    # Verifieer eigendom via de bijbehorende organisatie (404 als niet van jou).
+    await require_org_access(conv.org_id, user_id, db)
+    return conv
+
+
 @router.get("/stats", response_model=StatsOut)
 async def get_stats(
     org_id: str,
+    user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ):
     """Dashboard statistieken voor een organisatie."""
+    await require_org_access(org_id, user_id, db)
 
     # Totaal gesprekken
     total = await db.scalar(
@@ -108,9 +128,11 @@ async def list_conversations(
     org_id: str,
     status: Optional[str] = None,
     limit: int = 50,
+    user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ):
     """Haal alle gesprekken op voor een organisatie, inclusief het laatste bericht."""
+    await require_org_access(org_id, user_id, db)
 
     query = (
         select(Conversation)
@@ -158,24 +180,21 @@ async def list_conversations(
 @router.get("/{conversation_id}", response_model=ConversationOut)
 async def get_conversation(
     conversation_id: str,
+    user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ):
-    """Haal één gesprek op."""
-    result = await db.execute(
-        select(Conversation).where(Conversation.id == conversation_id)
-    )
-    conv = result.scalar_one_or_none()
-    if not conv:
-        raise HTTPException(status_code=404, detail="Gesprek niet gevonden")
-    return conv
+    """Haal één gesprek op (alleen eigen org bij auth aan)."""
+    return await _require_conversation(conversation_id, user_id, db)
 
 
 @router.get("/{conversation_id}/messages", response_model=list[MessageOut])
 async def get_messages(
     conversation_id: str,
+    user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ):
-    """Haal alle berichten op voor een gesprek."""
+    """Haal alle berichten op voor een gesprek (alleen eigen org bij auth aan)."""
+    await _require_conversation(conversation_id, user_id, db)
     result = await db.execute(
         select(Message)
         .where(Message.conversation_id == conversation_id)
@@ -188,15 +207,11 @@ async def get_messages(
 async def update_status(
     conversation_id: str,
     status: str,
+    user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ):
-    """Pas de status van een gesprek aan."""
-    result = await db.execute(
-        select(Conversation).where(Conversation.id == conversation_id)
-    )
-    conversation = result.scalar_one_or_none()
-    if not conversation:
-        raise HTTPException(status_code=404, detail="Gesprek niet gevonden")
+    """Pas de status van een gesprek aan (alleen eigen org bij auth aan)."""
+    conversation = await _require_conversation(conversation_id, user_id, db)
 
     valid_statuses = ["new", "in_progress", "appointment_set", "closed"]
     if status not in valid_statuses:

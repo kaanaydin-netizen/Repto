@@ -1,8 +1,9 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
+import { useAuth } from '@clerk/nextjs'
 import { Search, RefreshCw } from 'lucide-react'
 import ConversationCard from '@/components/ConversationCard'
-import { api, ORG_ID } from '@/lib/api'
+import { api } from '@/lib/api'
 import type { Conversation, ConversationStatus } from '@/lib/types'
 
 const FILTERS: { label: string; value: ConversationStatus | 'all' }[] = [
@@ -15,9 +16,12 @@ const FILTERS: { label: string; value: ConversationStatus | 'all' }[] = [
 
 export default function GesprekkenClient({
   initialConversations,
+  orgId,
 }: {
   initialConversations: (Conversation & { last_message?: string })[]
+  orgId: string
 }) {
+  const { getToken } = useAuth()
   const [conversations, setConversations] = useState(initialConversations)
   const [activeFilter, setActiveFilter] = useState<ConversationStatus | 'all'>('all')
   const [search, setSearch] = useState('')
@@ -26,10 +30,11 @@ export default function GesprekkenClient({
 
   // Ververs de lijst
   const refresh = useCallback(async (silent = true) => {
-    if (!ORG_ID) return
+    if (!orgId) return
     if (!silent) setRefreshing(true)
     try {
-      const fresh = await api.conversations.list(ORG_ID)
+      const token = await getToken()
+      const fresh = await api.conversations.list(orgId, undefined, token)
       setConversations(fresh)
       setLastUpdated(new Date())
     } catch {
@@ -37,7 +42,7 @@ export default function GesprekkenClient({
     } finally {
       if (!silent) setRefreshing(false)
     }
-  }, [])
+  }, [orgId, getToken])
 
   // Auto-refresh elke 30 seconden
   useEffect(() => {

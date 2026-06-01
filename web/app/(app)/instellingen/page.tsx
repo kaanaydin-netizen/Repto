@@ -1,5 +1,6 @@
 import { api } from '@/lib/api'
 import { getOrgId } from '@/lib/org'
+import { getServerToken } from '@/lib/server-token'
 import InstellingenClient from './InstellingenClient'
 import Link from 'next/link'
 
@@ -25,7 +26,8 @@ export default async function InstellingenPage() {
     )
   }
 
-  const org = await api.organizations.get(ORG_ID).catch(() => null)
+  const token = await getServerToken()
+  const org = await api.organizations.get(ORG_ID, token).catch(() => null)
 
   if (!org) {
     return (

@@ -28,9 +28,18 @@ class Settings(BaseSettings):
     # AI (Anthropic)
     anthropic_api_key: str
 
-    # Auth (Clerk) — optioneel fase 2
+    # Auth (Clerk) — multi-tenant JWT-verificatie
     clerk_secret_key: Optional[str] = None
     clerk_publishable_key: Optional[str] = None
+    # JWKS-URL + issuer van de Clerk-instance. Zolang clerk_jwks_url leeg is,
+    # blijft auth UIT (legacy gedrag) — zet deze op Railway om enforcement aan te zetten.
+    # bv. https://curious-oarfish-23.clerk.accounts.dev/.well-known/jwks.json
+    clerk_jwks_url: Optional[str] = None
+    clerk_issuer: Optional[str] = None  # bv. https://curious-oarfish-23.clerk.accounts.dev
+
+    @property
+    def auth_enabled(self) -> bool:
+        return bool(self.clerk_jwks_url)
 
     # Stripe — optioneel fase 2
     stripe_secret_key: Optional[str] = None

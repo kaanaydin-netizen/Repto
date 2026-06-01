@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { ArrowLeft, Building2, Bot, Phone, Database, Pencil,
          MessageSquare, Activity, CheckCircle2, CalendarCheck } from 'lucide-react'
 import { api } from '@/lib/api'
+import { getServerToken } from '@/lib/server-token'
 
 export const dynamic = 'force-dynamic'
 
@@ -47,9 +48,10 @@ export default async function KlantDetailPage({ params }: { params: Promise<{ id
   const { id } = await params
 
   // Laad org + stats parallel
+  const token = await getServerToken()
   const [org, stats] = await Promise.all([
-    api.organizations.get(id).catch(() => null),
-    api.conversations.stats(id).catch(() => ({
+    api.organizations.get(id, token).catch(() => null),
+    api.conversations.stats(id, token).catch(() => ({
       total_conversations: 0,
       active_conversations: 0,
       closed_conversations: 0,

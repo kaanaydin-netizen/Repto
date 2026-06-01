@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@clerk/nextjs'
 import { Check, Save, Trash2 } from 'lucide-react'
 import { api } from '@/lib/api'
 import type { Organization } from '@/lib/types'
@@ -75,6 +76,7 @@ const SECTORS = [
 
 export default function BewerkClient({ org }: Props) {
   const router = useRouter()
+  const { getToken } = useAuth()
 
   const [name, setName] = useState(org.name)
   const [sector, setSector] = useState(org.sector ?? 'algemeen')
@@ -116,7 +118,7 @@ export default function BewerkClient({ org }: Props) {
     }
 
     try {
-      await api.organizations.update(org.id, payload)
+      await api.organizations.update(org.id, payload, await getToken())
       setSaved(true)
       setTimeout(() => {
         router.push(`/klanten/${org.id}`)

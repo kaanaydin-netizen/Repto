@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import { useAuth } from '@clerk/nextjs'
 import { Check, Save, Copy, ExternalLink } from 'lucide-react'
 import { api } from '@/lib/api'
 import type { Organization } from '@/lib/types'
@@ -104,6 +105,7 @@ function Section({ title, description, children, onSave, saving, saved, error }:
 // ─── Hoofd component ──────────────────────────────────────────────────────────
 
 export default function InstellingenClient({ org }: { org: Organization }) {
+  const { getToken } = useAuth()
   // Bedrijfsprofiel
   const [name, setName]     = useState(org.name)
   const [sector, setSector] = useState(org.sector ?? 'algemeen')
@@ -143,7 +145,7 @@ export default function InstellingenClient({ org }: { org: Organization }) {
     if (!name.trim()) { setPError('Bedrijfsnaam is verplicht.'); return }
     setPSaving(true); setPError('')
     try {
-      await api.organizations.update(org.id, { name: name.trim(), sector })
+      await api.organizations.update(org.id, { name: name.trim(), sector }, await getToken())
       setPSaved(true); setTimeout(() => setPSaved(false), 3000)
     } catch { setPError('Opslaan mislukt. Probeer opnieuw.') }
     finally  { setPSaving(false) }
@@ -155,7 +157,7 @@ export default function InstellingenClient({ org }: { org: Organization }) {
       await api.organizations.update(org.id, {
         ai_tone: aiTone,
         ai_system_prompt: aiPrompt.trim() || undefined,
-      })
+      }, await getToken())
       setAiSaved(true); setTimeout(() => setAiSaved(false), 3000)
     } catch { setAiError('Opslaan mislukt. Probeer opnieuw.') }
     finally  { setAiSaving(false) }
@@ -167,7 +169,7 @@ export default function InstellingenClient({ org }: { org: Organization }) {
       await api.organizations.update(org.id, {
         whatsapp_number: waNumber.trim() || undefined,
         whatsapp_phone_number_id: waPhoneId.trim() || undefined,
-      })
+      }, await getToken())
       setWaSaved(true); setTimeout(() => setWaSaved(false), 3000)
     } catch { setWaError('Opslaan mislukt. Probeer opnieuw.') }
     finally  { setWaSaving(false) }
@@ -184,7 +186,7 @@ export default function InstellingenClient({ org }: { org: Organization }) {
       }
     }
     try {
-      await api.organizations.update(org.id, payload)
+      await api.organizations.update(org.id, payload, await getToken())
       setCrmSaved(true); setTimeout(() => setCrmSaved(false), 3000)
     } catch { setCrmError('Opslaan mislukt. Probeer opnieuw.') }
     finally  { setCrmSaving(false) }

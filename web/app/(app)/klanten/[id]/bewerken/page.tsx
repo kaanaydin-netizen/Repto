@@ -2,13 +2,15 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { api } from '@/lib/api'
+import { getServerToken } from '@/lib/server-token'
 import BewerkClient from './BewerkClient'
 
 export const dynamic = 'force-dynamic'
 
 export default async function BewerkPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const org = await api.organizations.get(id).catch(() => null)
+  const token = await getServerToken()
+  const org = await api.organizations.get(id, token).catch(() => null)
   if (!org) notFound()
 
   return (

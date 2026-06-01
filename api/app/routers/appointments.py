@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.database import get_db
 from app.models.conversation import Appointment
+from app.auth import get_current_user_id, require_org_access
 
 router = APIRouter(prefix="/appointments", tags=["appointments"])
 
@@ -53,6 +54,7 @@ class AppointmentUpdate(BaseModel):
 async def list_appointments(
     org_id: str,
     status: Optional[str] = None,
+    user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -60,6 +62,7 @@ async def list_appointments(
     Optioneel filteren op status (confirmed / cancelled).
     Gesorteerd op start_at oplopend.
     """
+    await require_org_access(org_id, user_id, db)
     query = select(Appointment).where(Appointment.org_id == org_id)
     if status:
         query = query.where(Appointment.status == status)
@@ -71,15 +74,17 @@ async def list_appointments(
 @router.get("/{appointment_id}", response_model=AppointmentOut)
 async def get_appointment(
     appointment_id: str,
+    user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ):
-    """Haal één afspraak op."""
+    """Haal één afspraak op (alleen eigen org bij auth aan)."""
     result = await db.execute(
         select(Appointment).where(Appointment.id == appointment_id)
     )
     appt = result.scalar_one_or_none()
     if not appt:
         raise HTTPException(status_code=404, detail="Afspraak niet gevonden")
+    await require_org_access(appt.org_id, user_id, db)
     return appt
 
 
@@ -87,15 +92,17 @@ async def get_appointment(
 async def update_appointment(
     appointment_id: str,
     data: AppointmentUpdate,
+    user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ):
-    """Pas een afspraak aan (bijv. annuleren of verzetten)."""
+    """Pas een afspraak aan (alleen eigen org bij auth aan)."""
     result = await db.execute(
         select(Appointment).where(Appointment.id == appointment_id)
     )
     appt = result.scalar_one_or_none()
     if not appt:
         raise HTTPException(status_code=404, detail="Afspraak niet gevonden")
+    await require_org_access(appt.org_id, user_id, db)
 
     if data.title is not None:
         appt.title = data.title

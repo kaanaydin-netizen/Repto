@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { Plus, Building2, Wifi, WifiOff } from 'lucide-react'
 import { api } from '@/lib/api'
+import { getServerToken } from '@/lib/server-token'
 import type { Organization } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
@@ -76,7 +77,8 @@ export default async function KlantenPage() {
   let error = false
 
   try {
-    orgs = await api.organizations.list()
+    const token = await getServerToken()
+    orgs = await api.organizations.list(token)
   } catch {
     error = true
   }

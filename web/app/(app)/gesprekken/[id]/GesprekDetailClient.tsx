@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@clerk/nextjs'
 import { ArrowLeft, Phone, Bot, RefreshCw, CheckCircle2 } from 'lucide-react'
 import { format, isToday, isYesterday, isSameDay } from 'date-fns'
 import { nl } from 'date-fns/locale'
@@ -47,6 +48,7 @@ export default function GesprekDetailClient({
   initialMessages: Message[]
 }) {
   const router = useRouter()
+  const { getToken } = useAuth()
   const [conv,     setConv]     = useState(initialConv)
   const [messages, setMessages] = useState(initialMessages)
   const [saving,   setSaving]   = useState(false)
@@ -85,9 +87,10 @@ export default function GesprekDetailClient({
   const refreshMessages = useCallback(async (showSpinner = false) => {
     if (showSpinner) setRefreshing(true)
     try {
+      const token = await getToken()
       const [freshMsgs, freshConv] = await Promise.all([
-        api.conversations.messages(conv.id),
-        api.conversations.get(conv.id),
+        api.conversations.messages(conv.id, token),
+        api.conversations.get(conv.id, token),
       ])
       setMessages(freshMsgs)
       setConv(freshConv)
@@ -96,7 +99,7 @@ export default function GesprekDetailClient({
     } finally {
       if (showSpinner) setRefreshing(false)
     }
-  }, [conv.id])
+  }, [conv.id, getToken])
 
   useEffect(() => {
     const timer = setInterval(() => refreshMessages(false), 10_000)
@@ -109,7 +112,8 @@ export default function GesprekDetailClient({
     if (status === conv.status || saving) return
     setSaving(true)
     try {
-      await api.conversations.updateStatus(conv.id, status)
+      const token = await getToken()
+      await api.conversations.updateStatus(conv.id, status, token)
       setConv(prev => ({ ...prev, status }))
     } catch (e) {
       console.error('Status update mislukt:', e)

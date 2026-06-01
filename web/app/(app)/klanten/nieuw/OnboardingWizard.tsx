@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@clerk/nextjs'
 import { Check, ChevronRight, Building2, Bot, Phone, Database, PartyPopper, Copy } from 'lucide-react'
 import { api } from '@/lib/api'
 import type { OrganizationCreate } from '@/lib/types'
@@ -97,6 +98,7 @@ function SkipBadge() {
 
 export default function OnboardingWizard() {
   const router = useRouter()
+  const { getToken } = useAuth()
   const [step, setStep] = useState(1)
   const [form, setForm] = useState<FormData>(INITIAL)
   const [loading, setLoading] = useState(false)
@@ -130,16 +132,8 @@ export default function OnboardingWizard() {
     setLoading(true)
     setError('')
 
-    // Haal Clerk user ID op voor multi-tenant koppeling
-    let clerkUserId: string | undefined
-    try {
-      const res = await fetch('/api/user/primary-org')
-      if (res.ok) {
-        // Clerk user ID is beschikbaar — stuur het mee als header
-        // We lezen het indirect via de primary-org response context
-      }
-    } catch { /* stil falen */ }
-
+    // De eigenaar (clerk_user_id) wordt server-side uit het token afgeleid —
+    // we sturen het bewust NIET vanuit de client mee.
     const payload: OrganizationCreate = {
       name: form.name.trim(),
       sector: form.sector,
@@ -159,7 +153,7 @@ export default function OnboardingWizard() {
     }
 
     try {
-      const org = await api.organizations.create(payload)
+      const org = await api.organizations.create(payload, await getToken())
 
       // Sla org ID op als primaire org (Clerk metadata + cookie)
       await fetch('/api/user/primary-org', {

@@ -3,6 +3,7 @@ import StatCard from '@/components/StatCard'
 import ConversationCard from '@/components/ConversationCard'
 import { api } from '@/lib/api'
 import { getOrgId } from '@/lib/org'
+import { getServerToken } from '@/lib/server-token'
 import type { DashboardStats } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
@@ -17,11 +18,12 @@ const defaultStats: DashboardStats = {
 
 export default async function DashboardPage() {
   const ORG_ID = await getOrgId()
+  const token = await getServerToken()
 
   const [stats, conversations, org] = await Promise.all([
-    api.conversations.stats(ORG_ID).catch(() => defaultStats),
-    api.conversations.list(ORG_ID).catch(() => []),
-    ORG_ID ? api.organizations.get(ORG_ID).catch(() => null) : Promise.resolve(null),
+    api.conversations.stats(ORG_ID, token).catch(() => defaultStats),
+    api.conversations.list(ORG_ID, undefined, token).catch(() => []),
+    ORG_ID ? api.organizations.get(ORG_ID, token).catch(() => null) : Promise.resolve(null),
   ])
 
   const recent = conversations.slice(0, 5)
