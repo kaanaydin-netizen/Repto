@@ -22,13 +22,6 @@ import WhatsAppWidget from '@/components/WhatsAppWidget'
 import PricingToggle from '@/components/PricingToggle'
 import { SECTORS } from '@/lib/sectors'
 
-// ─── Configuratie ──────────────────────────────────────────────────────────────
-// Vul een YouTube/Vimeo embed-URL in zodra de demovideo klaar is; zolang dit
-// leeg is, toont de demo-sectie de placeholder.
-// YouTube: 'https://www.youtube.com/embed/VIDEO_ID?rel=0&modestbranding=1'
-// Vimeo:   'https://player.vimeo.com/video/VIDEO_ID'
-const DEMO_VIDEO_URL = ''
-
 // ─── Redirect ingelogde gebruikers ────────────────────────────────────────────
 
 export default async function HomePage() {
@@ -236,69 +229,142 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* ── Demo video ───────────────────────────────────────────────────── */}
+      {/* ── App-voorbeeld ────────────────────────────────────────────────── */}
       <section className="bg-gray-50 py-20">
-        <div className="mx-auto max-w-4xl px-6">
-          <div className="mb-10 text-center">
+        <div className="mx-auto max-w-5xl px-6">
+          <div className="mb-12 text-center">
             <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">
-              ▶ Bekijk de demo
+              👀 Een kijkje binnenin
             </div>
-            <h2 className="text-3xl font-extrabold text-gray-900">Van WhatsApp-bericht tot lead in 60 seconden</h2>
+            <h2 className="text-3xl font-extrabold text-gray-900">Zo ziet Repto er vanbinnen uit</h2>
             <p className="mt-3 text-lg text-gray-500">
-              Zie hoe Repto automatisch antwoordt, de klant kwalificeert en de lead opslaat — terwijl jij slaapt.
+              Een helder dashboard waarin je al je WhatsApp-gesprekken, leads en de AI-instellingen
+              op één plek beheert.
             </p>
           </div>
 
-          {/* Video container — swap de src in zodra de video klaar is */}
-          {/* Gebruik YouTube: src="https://www.youtube.com/embed/JOUW_VIDEO_ID?autoplay=0&rel=0" */}
-          {/* Gebruik Vimeo:   src="https://player.vimeo.com/video/JOUW_VIDEO_ID" */}
-          <div className="overflow-hidden rounded-2xl border border-gray-200 shadow-xl shadow-gray-200">
-            {DEMO_VIDEO_URL ? (
-              <iframe
-                className="aspect-video w-full"
-                src={DEMO_VIDEO_URL}
-                title="Repto demo — van WhatsApp-bericht tot lead in 60 seconden"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              />
-            ) : (
-              /* Placeholder — verschijnt zolang DEMO_VIDEO_URL leeg is */
-              <div className="relative flex aspect-video w-full items-center justify-center bg-gradient-to-br from-indigo-900 via-indigo-800 to-violet-900">
-                {/* Achtergrond ruis-patroon */}
-                <div className="pointer-events-none absolute inset-0 opacity-10"
-                  style={{ backgroundImage: 'radial-gradient(circle, #fff 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
+          <div className="grid gap-6 lg:grid-cols-2">
 
-                {/* Play knop */}
-                <div className="flex flex-col items-center gap-5">
-                  <div className="flex h-20 w-20 items-center justify-center rounded-full bg-white/20 ring-4 ring-white/30 backdrop-blur-sm">
-                    <div className="ml-1.5 h-0 w-0 border-y-[14px] border-l-[22px] border-y-transparent border-l-white" />
-                  </div>
-                  <div className="text-center">
-                    <p className="text-base font-semibold text-white">Demo video — binnenkort beschikbaar</p>
-                    <p className="mt-1 text-sm text-indigo-300">Wordt opgenomen · 60 seconden</p>
-                  </div>
-                </div>
-
-                {/* Stats overlay onderaan */}
-                <div className="absolute bottom-0 left-0 right-0 flex justify-center gap-6 bg-black/30 px-6 py-3 backdrop-blur-sm">
-                  {[
-                    { value: '60s', label: 'Video' },
-                    { value: '21:43', label: 'Avondlead' },
-                    { value: '< 5s', label: 'AI-reactie' },
-                    { value: '100%', label: 'Automatisch' },
-                  ].map(s => (
-                    <div key={s.label} className="text-center">
-                      <p className="text-sm font-bold text-white">{s.value}</p>
-                      <p className="text-[10px] text-indigo-300">{s.label}</p>
+            {/* Voorbeeld 1 — Gesprekkenlijst */}
+            <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-lg shadow-gray-200">
+              <div className="flex items-center gap-2 border-b border-gray-100 bg-gray-50 px-4 py-2.5">
+                <MessageSquare className="h-4 w-4 text-indigo-600" />
+                <span className="text-sm font-semibold text-gray-700">Gesprekken</span>
+                <span className="ml-auto rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold text-indigo-600">
+                  Live
+                </span>
+              </div>
+              <div className="space-y-2 p-4">
+                {[
+                  { name: 'Thomas De Smedt', msg: 'Ik heb een lek in mijn badkamer...', time: '21:43', badge: 'Nieuw', tone: 'bg-amber-100 text-amber-700' },
+                  { name: 'Sofie Vermeersch', msg: 'Wanneer kunnen jullie langskomen?', time: '18:02', badge: 'In gesprek', tone: 'bg-blue-100 text-blue-700' },
+                  { name: 'Marc Janssens', msg: 'Bedankt, tot maandag!', time: 'Gisteren', badge: 'Afspraak', tone: 'bg-green-100 text-green-700' },
+                  { name: 'Els Peeters', msg: 'Prima, ik wacht jullie telefoontje af.', time: 'Ma', badge: 'Gesloten', tone: 'bg-gray-100 text-gray-500' },
+                ].map(c => (
+                  <div key={c.name} className="flex items-center gap-3 rounded-xl border border-gray-100 p-2.5">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-700">
+                      {c.name[0]}
                     </div>
-                  ))}
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-xs font-semibold text-gray-900">{c.name}</p>
+                      <p className="truncate text-[11px] text-gray-400">{c.msg}</p>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <p className="text-[10px] text-gray-400">{c.time}</p>
+                      <span className={`mt-0.5 inline-block rounded-full px-1.5 py-0.5 text-[9px] font-semibold ${c.tone}`}>
+                        {c.badge}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Voorbeeld 2 — Gesprek-detail met AI */}
+            <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-lg shadow-gray-200">
+              <div className="flex items-center gap-2 border-b border-gray-100 bg-gray-50 px-4 py-2.5">
+                <span className="text-sm font-semibold text-gray-700">Thomas De Smedt</span>
+                <span className="ml-auto rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700">
+                  Afspraak ✓
+                </span>
+              </div>
+              <div className="space-y-2.5 p-4">
+                {[
+                  { dir: 'in',  text: 'Goedenavond, ik heb een lek in mijn badkamer. Kunnen jullie morgen langskomen?' },
+                  { dir: 'out', text: 'Goedenavond! Dat lossen we snel op. Mag ik uw naam en adres?' },
+                  { dir: 'in',  text: 'Thomas De Smedt, Kerkstraat 14, Gent' },
+                  { dir: 'out', text: 'Bedankt Thomas! We nemen morgenochtend contact op om een tijdstip af te spreken. 👍' },
+                ].map((m, i) => (
+                  <div key={i} className={`flex ${m.dir === 'out' ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`max-w-[82%] rounded-xl px-3 py-2 text-xs leading-relaxed ${
+                      m.dir === 'out' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700'
+                    }`}>
+                      {m.dir === 'out' && <p className="mb-0.5 text-[9px] font-semibold text-indigo-200">⚡ Repto AI</p>}
+                      {m.text}
+                    </div>
+                  </div>
+                ))}
+                <div className="mt-1 flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-3 py-2">
+                  <Check className="h-3.5 w-3.5 shrink-0 text-green-600" />
+                  <p className="text-[11px] font-medium text-green-700">Lead automatisch opgeslagen in Airtable</p>
                 </div>
               </div>
-            )}
+            </div>
+
+            {/* Voorbeeld 3 — Stat-overzicht */}
+            <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-lg shadow-gray-200">
+              <div className="flex items-center gap-2 border-b border-gray-100 bg-gray-50 px-4 py-2.5">
+                <TrendingUp className="h-4 w-4 text-indigo-600" />
+                <span className="text-sm font-semibold text-gray-700">Overzicht</span>
+              </div>
+              <div className="grid grid-cols-2 gap-3 p-4">
+                {[
+                  { label: 'Gesprekken', value: '48', color: 'text-indigo-700' },
+                  { label: 'Nieuwe leads', value: '12', color: 'text-amber-700' },
+                  { label: 'Afspraken', value: '9', color: 'text-green-700' },
+                  { label: 'CRM-sync', value: '35', color: 'text-blue-700' },
+                ].map(s => (
+                  <div key={s.label} className="rounded-xl border border-gray-100 bg-gray-50 p-3">
+                    <p className="text-[11px] text-gray-400">{s.label}</p>
+                    <p className={`mt-1 text-2xl font-bold ${s.color}`}>{s.value}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Voorbeeld 4 — AI-instellingen */}
+            <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-lg shadow-gray-200">
+              <div className="flex items-center gap-2 border-b border-gray-100 bg-gray-50 px-4 py-2.5">
+                <Settings2 className="h-4 w-4 text-indigo-600" />
+                <span className="text-sm font-semibold text-gray-700">AI-instellingen</span>
+              </div>
+              <div className="space-y-3 p-4">
+                <div>
+                  <p className="mb-1 text-[11px] font-medium text-gray-500">Sector</p>
+                  <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-700">
+                    🔧 Installateur
+                  </div>
+                </div>
+                <div>
+                  <p className="mb-1 text-[11px] font-medium text-gray-500">Communicatiestijl</p>
+                  <div className="flex gap-2">
+                    <span className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white">Formeel (u)</span>
+                    <span className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-500">Informeel (je)</span>
+                  </div>
+                </div>
+                <div>
+                  <p className="mb-1 text-[11px] font-medium text-gray-500">Extra instructies</p>
+                  <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-[11px] leading-relaxed text-gray-600">
+                    Actief in Gent en omstreken · Spoedlijn 09 123 45 67 · Geen offertes via WhatsApp, altijd eerst een werfbezoek.
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <p className="mt-4 text-center text-sm text-gray-400">
-            Herkenbaar? <a href="/sign-up" className="font-medium text-indigo-600 hover:underline">Start 7 dagen gratis →</a>
+          <p className="mt-8 text-center text-sm text-gray-400">
+            Benieuwd hoe dit voor jouw bedrijf werkt?{' '}
+            <a href="/sign-up" className="font-medium text-indigo-600 hover:underline">Start 7 dagen gratis →</a>
           </p>
         </div>
       </section>
