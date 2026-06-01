@@ -14,3 +14,5 @@ const nextConfig: NextConfig = {
 };
 
 export default nextConfig;
+
+// auto-deploy test 01-06-2026 — kan verwijderd worden
