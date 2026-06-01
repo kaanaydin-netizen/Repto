@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Geist } from 'next/font/google'
 import { ClerkProvider } from '@clerk/nextjs'
 import { nlBE } from '@clerk/localizations'
+import CookieBanner from '@/components/CookieBanner'
 import './globals.css'
 
 const geist = Geist({ subsets: ['latin'] })
@@ -21,7 +22,7 @@ export const metadata: Metadata = {
     'leads',
     'CRM',
     'automatisering',
-    'Belgie',
+    'België',
     'Nederland',
     'Airtable',
   ],
@@ -63,6 +64,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <html lang="nl">
         <body className={`${geist.className} bg-gray-50 antialiased`}>
           {children}
+          <CookieBanner />
         </body>
       </html>
     </ClerkProvider>

@@ -22,6 +22,57 @@ import WhatsAppWidget from '@/components/WhatsAppWidget'
 import PricingToggle from '@/components/PricingToggle'
 import { SECTORS } from '@/lib/sectors'
 
+// ─── FAQ ────────────────────────────────────────────────────────────────────────
+// Eén bron voor zowel de zichtbare FAQ-sectie als het FAQPage JSON-LD schema.
+const FAQ_ITEMS: { q: string; a: string }[] = [
+  {
+    q: 'Wat als de AI een fout antwoord geeft?',
+    a: 'Repto is getraind op jouw sector en instructies. Je kunt elk gesprek live volgen en op elk moment overnemen. De AI laat duidelijk weten dat een medewerker zal terugbellen voor complexe vragen.',
+  },
+  {
+    q: 'Werkt dit met mijn bestaande WhatsApp-nummer?',
+    a: 'Repto werkt via WhatsApp Business. Je koppelt je bestaand zakelijk nummer in de onboarding wizard. Heb je nog geen WhatsApp Business? We begeleiden je stap voor stap bij de aanvraag.',
+  },
+  {
+    q: 'Kan ik het gesprek overnemen?',
+    a: 'Ja, met één klik in je dashboard kun je elk gesprek overnemen. De AI pauzeert automatisch zodra jij reageert.',
+  },
+  {
+    q: 'Kan ik de AI eerst testen voor klanten ermee in contact komen?',
+    a: 'Ja. Tijdens de gratis trial heb je toegang tot een testnummer waarmee je zelf gesprekken kunt simuleren. Zo stel je alles in op jouw manier voor je live gaat.',
+  },
+  {
+    q: 'Welke CRM-systemen worden ondersteund?',
+    a: 'Momenteel Airtable (volledig). HubSpot en Pipedrive zijn in ontwikkeling en worden later dit jaar toegevoegd. Je kunt ook kiezen voor alleen e-mailnotificaties zonder CRM.',
+  },
+  {
+    q: 'Hoe lang duurt de installatie?',
+    a: 'Gemiddeld 10 minuten. Je koppelt je WhatsApp Business-nummer, configureert de AI en je bent live. Geen technische kennis vereist.',
+  },
+  {
+    q: 'Wat als ik meer gesprekken heb dan mijn plan toelaat?',
+    a: 'Je ontvangt een melding bij 80% gebruik en kunt dan eenvoudig upgraden naar een hoger plan. Je wordt nooit plots afgesneden.',
+  },
+  {
+    q: 'Wat als ik wil opzeggen?',
+    a: 'Je kunt op elk moment opzeggen via je accountinstellingen, zonder opzegtermijn. Je wordt nooit langer gefactureerd dan de lopende maand.',
+  },
+  {
+    q: 'Wat als jullie de prijzen aanpassen?',
+    a: 'Bestaande abonnees worden minimaal 30 dagen op voorhand per e-mail verwittigd. Je huidige tarief blijft geldig tot het einde van je lopende facturatieperiode. Akkoord je niet met de nieuwe prijs, dan kan je gewoon opzeggen — zonder extra kosten.',
+  },
+]
+
+const faqJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: FAQ_ITEMS.map(({ q, a }) => ({
+    '@type': 'Question',
+    name: q,
+    acceptedAnswer: { '@type': 'Answer', text: a },
+  })),
+}
+
 // ─── Redirect ingelogde gebruikers ────────────────────────────────────────────
 
 export default async function HomePage() {
@@ -34,6 +85,12 @@ export default async function HomePage() {
 
   return (
     <div className="min-h-screen bg-white">
+
+      {/* FAQ structured data (rich snippets in Google) */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
 
       {/* ── Navigatie ──────────────────────────────────────────────────────── */}
       <header className="sticky top-0 z-50 border-b border-gray-100 bg-white/95 backdrop-blur">
@@ -791,44 +848,7 @@ export default async function HomePage() {
           </div>
 
           <div className="grid gap-6 sm:grid-cols-2">
-            {[
-              {
-                q: 'Wat als de AI een fout antwoord geeft?',
-                a: 'Repto is getraind op jouw sector en instructies. Je kunt elk gesprek live volgen en op elk moment overnemen. De AI laat duidelijk weten dat een medewerker zal terugbellen voor complexe vragen.',
-              },
-              {
-                q: 'Werkt dit met mijn bestaande WhatsApp-nummer?',
-                a: 'Repto werkt via WhatsApp Business. Je koppelt je bestaand zakelijk nummer in de onboarding wizard. Heb je nog geen WhatsApp Business? We begeleiden je stap voor stap bij de aanvraag.',
-              },
-              {
-                q: 'Kan ik het gesprek overnemen?',
-                a: 'Ja, met één klik in je dashboard kun je elk gesprek overnemen. De AI pauzeert automatisch zodra jij reageert.',
-              },
-              {
-                q: 'Kan ik de AI eerst testen voor klanten ermee in contact komen?',
-                a: 'Ja. Tijdens de gratis trial heb je toegang tot een testnummer waarmee je zelf gesprekken kunt simuleren. Zo stel je alles in op jouw manier voor je live gaat.',
-              },
-              {
-                q: 'Welke CRM-systemen worden ondersteund?',
-                a: 'Momenteel Airtable (volledig). HubSpot en Pipedrive zijn in ontwikkeling en worden later dit jaar toegevoegd. Je kunt ook kiezen voor alleen e-mailnotificaties zonder CRM.',
-              },
-              {
-                q: 'Hoe lang duurt de installatie?',
-                a: 'Gemiddeld 10 minuten. Je koppelt je WhatsApp Business-nummer, configureert de AI en je bent live. Geen technische kennis vereist.',
-              },
-              {
-                q: 'Wat als ik meer gesprekken heb dan mijn plan toelaat?',
-                a: 'Je ontvangt een melding bij 80% gebruik. Overschot wordt afgerekend aan een vast tarief per gesprek, of je upgradet eenvoudig naar een hoger plan. Je wordt nooit plots afgesneden.',
-              },
-              {
-                q: 'Wat als ik wil opzeggen?',
-                a: 'Je kunt op elk moment opzeggen via je accountinstellingen, zonder opzegtermijn. Je wordt nooit langer gefactureerd dan de lopende maand.',
-              },
-              {
-                q: 'Wat als jullie de prijzen aanpassen?',
-                a: 'Bestaande abonnees worden minimaal 30 dagen op voorhand per e-mail verwittigd. Je huidige tarief blijft geldig tot het einde van je lopende facturatieperiode. Akkoord je niet met de nieuwe prijs, dan kan je gewoon opzeggen — zonder extra kosten.',
-              },
-            ].map(({ q, a }) => (
+            {FAQ_ITEMS.map(({ q, a }) => (
               <div
                 key={q}
                 className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm"

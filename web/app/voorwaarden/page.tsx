@@ -5,6 +5,13 @@ import { Zap, ArrowLeft } from 'lucide-react'
 export const metadata: Metadata = {
   title: 'Algemene Voorwaarden',
   description: 'Algemene voorwaarden voor het gebruik van Repto, de AI-receptionist voor KMO\'s.',
+  alternates: { canonical: '/voorwaarden' },
+  openGraph: {
+    title: 'Algemene Voorwaarden — Repto',
+    description: 'Algemene voorwaarden voor het gebruik van Repto, de AI-receptionist voor KMO\'s.',
+    url: '/voorwaarden',
+    type: 'website',
+  },
 }
 
 export default function VoorwaardenPage() {
@@ -112,8 +119,8 @@ export default function VoorwaardenPage() {
             <h3 className="mb-2 mt-4 font-semibold text-gray-800">4.4 Gesprekslimieten</h3>
             <p>
               Elk abonnementsplan bevat een maandelijks maximum aantal gesprekken. Bij overschrijding
-              wordt de klant geïnformeerd. Overschot wordt afgerekend per gesprek aan het geldend tarief,
-              of de klant kan upgraden naar een hoger plan.
+              wordt de klant geïnformeerd en kan de klant upgraden naar een hoger plan. De dienst wordt
+              nooit zonder voorafgaande verwittiging onderbroken.
             </p>
           </section>
 

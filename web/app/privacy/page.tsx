@@ -5,6 +5,13 @@ import { Zap, ArrowLeft } from 'lucide-react'
 export const metadata: Metadata = {
   title: 'Privacybeleid',
   description: 'Hoe Repto omgaat met jouw gegevens en klantdata. AVG/GDPR-conform, opgeslagen op Europese servers.',
+  alternates: { canonical: '/privacy' },
+  openGraph: {
+    title: 'Privacybeleid — Repto',
+    description: 'Hoe Repto omgaat met jouw gegevens en klantdata. AVG/GDPR-conform, opgeslagen op Europese servers.',
+    url: '/privacy',
+    type: 'website',
+  },
 }
 
 export default function PrivacyPage() {
@@ -117,7 +124,7 @@ export default function PrivacyPage() {
             <ul className="mt-3 ml-5 list-disc space-y-1.5">
               <li><strong>Supabase / PostgreSQL</strong> — database (EU-regio)</li>
               <li><strong>Railway</strong> — server hosting (EU-regio)</li>
-              <li><strong>Vercel</strong> — frontend hosting</li>
+              <li><strong>Vercel</strong> — frontend hosting (EU-regio, Frankfurt)</li>
               <li><strong>Anthropic Claude</strong> — AI-tekstgeneratie (berichten worden verwerkt maar niet opgeslagen door Anthropic voor trainingsdata)</li>
               <li><strong>Twilio</strong> — WhatsApp-berichtverwerking</li>
               <li><strong>Stripe</strong> — betalingen</li>
