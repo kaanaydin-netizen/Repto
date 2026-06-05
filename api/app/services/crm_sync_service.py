@@ -17,6 +17,7 @@ from sqlalchemy import select
 from app.config import get_settings
 from app.models.conversation import Conversation, Organization, CrmSyncLog, Message, Appointment
 from app.services.ai_service import _NL_DAGEN, _NL_MAANDEN
+from app.services.identity_service import compute_lead_score
 
 settings = get_settings()
 logger = logging.getLogger(__name__)
@@ -42,16 +43,18 @@ class CrmSyncService:
         org: Organization,
         existing_record_id: str | None = None,
         existing_log_id: str | None = None,
+        lead: dict | None = None,
     ) -> None:
         """
         Stuur de lead naar het juiste CRM op basis van org.crm_type.
         Als existing_record_id opgegeven is, wordt het bestaande record bijgewerkt (upsert).
+        lead: een reeds geëxtraheerde lead-dict (hergebruik) of None (zelf extraheren).
         """
         try:
             if org.crm_type == "airtable":
-                external_id = await self._sync_airtable(conversation, org)
+                external_id = await self._sync_airtable(conversation, org, lead=lead)
             elif org.crm_type == "google_sheets":
-                external_id = await self._sync_google_sheets_legacy(conversation, org)
+                external_id = await self._sync_google_sheets_legacy(conversation, org, lead=lead)
             elif org.crm_type == "hubspot":
                 raise NotImplementedError("HubSpot integratie is gepland voor fase 2")
             elif org.crm_type == "pipedrive":
@@ -196,7 +199,9 @@ class CrmSyncService:
         records = resp.json().get("records", [])
         return records[0].get("id", "unknown") if records else "unknown"
 
-    async def _sync_airtable(self, conversation: Conversation, org: Organization) -> str:
+    async def _sync_airtable(
+        self, conversation: Conversation, org: Organization, lead: dict | None = None
+    ) -> str:
         """
         Synchroniseer het gesprek naar Airtable als relationeel mini-CRM.
         - Leads: verrijkte tabel (status-pijplijn, intentie, samenvatting).
@@ -217,14 +222,16 @@ class CrmSyncService:
         if not api_key or not base_id:
             raise ValueError("api_key en base_id zijn verplicht in crm_credentials_encrypted")
 
-        # Alle berichten ophalen + lead-data extraheren via Claude Haiku
-        msgs_result = await self.db.execute(
-            select(Message)
-            .where(Message.conversation_id == conversation.id)
-            .order_by(Message.sent_at.asc())
-        )
-        all_messages = list(msgs_result.scalars().all())
-        lead = await self._extract_lead_data(all_messages)
+        # Lead-data: hergebruik de reeds geëxtraheerde dict indien meegegeven (coherente
+        # score), anders zelf extraheren via Claude Haiku (standalone-pad).
+        if lead is None:
+            msgs_result = await self.db.execute(
+                select(Message)
+                .where(Message.conversation_id == conversation.id)
+                .order_by(Message.sent_at.asc())
+            )
+            all_messages = list(msgs_result.scalars().all())
+            lead = await self._extract_lead_data(all_messages)
 
         # Afspraken van dit gesprek bepalen mee de pijplijn-status én worden zelf gesynct.
         appt_result = await self.db.execute(
@@ -236,6 +243,9 @@ class CrmSyncService:
         first_contact = conversation.created_at or datetime.now()
         # Type werk + samenvatting samengevoegd in één veld (formaat "Type werk — samenvatting").
         samenvatting = _combine_type_en_samenvatting(lead.get("type_werk"), lead.get("samenvatting"))
+        # Deterministische warm/lauw/koud-score uit dezelfde lead-dict (zelfde resultaat als de
+        # contact-verrijking) — Airtable single-select verwacht hoofdletter (Warm/Lauw/Koud).
+        score, score_reason = compute_lead_score(lead)
         lead_fields = {
             "Bron ID": conversation.id,
             "Naam": lead.get("naam") or conversation.wa_contact_name or "Onbekend",
@@ -246,6 +256,8 @@ class CrmSyncService:
             "Status": _pipeline_status(conversation, has_appointment, lead),
             "Intentie": lead.get("intentie") or "Anders",
             "Urgentie": lead.get("urgentie") or "",
+            "Score": score.capitalize(),
+            "Score Reden": score_reason,
             "Samenvatting": samenvatting,
             "Eerste contact": first_contact.isoformat(),
             "Laatste update": datetime.now().isoformat(),
@@ -297,7 +309,7 @@ class CrmSyncService:
         return lead_record_id
 
     async def _sync_google_sheets_legacy(
-        self, conversation: Conversation, org: Organization
+        self, conversation: Conversation, org: Organization, lead: dict | None = None
     ) -> str:
         """
         Legacy Google Sheets sync via service account.
@@ -333,7 +345,8 @@ class CrmSyncService:
         )
         all_messages = list(msgs_result.scalars().all())
         first_inbound = next((m for m in all_messages if m.direction == "inbound"), None)
-        lead = await self._extract_lead_data(all_messages)
+        if lead is None:
+            lead = await self._extract_lead_data(all_messages)
 
         row = [
             datetime.now().strftime("%d/%m/%Y %H:%M"),

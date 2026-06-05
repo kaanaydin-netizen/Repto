@@ -3,7 +3,9 @@ Unit tests voor crm_sync_service.py
 Tests: pijplijn-status mapping, intentie/urgentie/afspraak-status normalisatie,
 en de Airtable native-upsert payload (gemockte httpx-client).
 """
+import json
 import pytest
+from datetime import datetime
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
@@ -121,3 +123,67 @@ async def test_airtable_upsert_raises_on_error_status():
             client, "appXXXXXXXXXXXXXX", "patKEY", "Leads",
             merge_on=["Bron ID"], fields={"Naam": "X"},
         )
+
+
+# ─── _sync_airtable stuurt Score + Score Reden mee ──────────────────────────────
+
+class _CaptureClient:
+    """Vangt elke patch-payload op in de class-attribuut `calls`."""
+    calls: list = []
+
+    def __init__(self, *args, **kwargs):
+        pass
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *args):
+        return False
+
+    async def patch(self, url, headers=None, json=None):
+        _CaptureClient.calls.append(json)
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.json.return_value = {"records": [{"id": "recABC"}]}
+        return resp
+
+
+@pytest.mark.asyncio
+async def test_sync_airtable_includes_score(monkeypatch):
+    from app.services import crm_sync_service as mod
+    from app.services.crm_sync_service import CrmSyncService
+
+    _CaptureClient.calls = []
+    monkeypatch.setattr(mod.httpx, "AsyncClient", _CaptureClient)
+
+    svc = CrmSyncService.__new__(CrmSyncService)  # geen anthropic-client nodig
+    # appointments-query → lege lijst (lead wordt meegegeven, dus geen messages-query)
+    appt_result = MagicMock()
+    appt_result.scalars.return_value.all.return_value = []
+    svc.db = MagicMock()
+    svc.db.execute = AsyncMock(return_value=appt_result)
+
+    org = SimpleNamespace(
+        crm_type="airtable",
+        crm_credentials_encrypted=json.dumps(
+            {"api_key": "patX", "base_id": "appX", "table_name": "Leads"}
+        ),
+    )
+    conv = SimpleNamespace(
+        id="conv-1", wa_contact_name="Jan", wa_contact_phone="32470123456",
+        created_at=datetime.now(), status="new",
+    )
+    # Warme lead: koopintentie + hoge urgentie + datum.
+    lead = {
+        "naam": "Jan", "adres": None, "email": None, "type_werk": "keuring",
+        "gewenste_datum": "2026-06-10", "urgentie": "Hoog", "intentie": "Offerte",
+        "samenvatting": "keuring nodig", "opvolging_nodig": False,
+        "opvolg_reden": None, "opvolg_datum": None,
+    }
+
+    record_id = await svc._sync_airtable(conv, org, lead=lead)
+
+    assert record_id == "recABC"
+    fields = _CaptureClient.calls[0]["records"][0]["fields"]
+    assert fields["Score"] == "Warm"          # single-select hoofdletter
+    assert fields["Score Reden"]              # niet-lege transparante reden

@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.config import get_settings
-from app.models.conversation import Conversation, Organization, Message
+from app.models.conversation import Conversation, Organization, Message, Contact
 
 settings = get_settings()
 logger = logging.getLogger(__name__)
@@ -51,7 +51,16 @@ async def send_lead_notification(conversation: Conversation, db: AsyncSession) -
         first_msg = next((m for m in messages if m.direction == "inbound"), None)
         preview = (first_msg.content[:200] + "…") if first_msg and len(first_msg.content) > 200 else (first_msg.content if first_msg else "")
 
-        html = _build_html(conversation, org, preview, messages)
+        # Lead-score van het gekoppelde Contact (zodat de klant weet wie eerst te bellen).
+        # Expliciet laden — geen lazy relationship in async sessies.
+        contact = None
+        if conversation.contact_id:
+            contact_result = await db.execute(
+                select(Contact).where(Contact.id == conversation.contact_id)
+            )
+            contact = contact_result.scalar_one_or_none()
+
+        html = _build_html(conversation, org, preview, messages, contact)
         subject = f"🎉 Nieuwe lead via Repto — {org.name}"
 
         async with httpx.AsyncClient(timeout=10) as client:
@@ -79,11 +88,42 @@ async def send_lead_notification(conversation: Conversation, db: AsyncSession) -
         logger.error(f"E-mailnotificatie fout: {e}")
 
 
+_SCORE_STYLES = {
+    "warm": ("🔥 Warm", "#fee2e2", "#b91c1c"),
+    "lauw": ("🌤️ Lauw", "#fef3c7", "#b45309"),
+    "koud": ("❄️ Koud", "#e0f2fe", "#0369a1"),
+}
+
+
+def _score_row(contact) -> str:
+    """Rij met de warm/lauw/koud-score + reden; leeg als er (nog) geen score is."""
+    if not contact or not contact.score:
+        return ""
+    label, bg, fg = _SCORE_STYLES.get(contact.score, (contact.score.capitalize(), "#f3f4f6", "#6b7280"))
+    reason = contact.score_reason or ""
+    chip = (
+        f'<span style="background:{bg};color:{fg};border-radius:999px;padding:3px 12px;'
+        f'font-size:12px;font-weight:700;">{label}</span>'
+    )
+    reason_html = f'<div style="margin-top:6px;font-size:12px;color:#6b7280;">{reason}</div>' if reason else ""
+    return f"""
+<tr>
+  <td style="padding:12px 16px;border-top:1px solid #f3f4f6;font-size:13px;color:#6b7280;font-weight:500;width:140px;">
+    🎯 Lead-score
+  </td>
+  <td style="padding:12px 16px;border-top:1px solid #f3f4f6;font-size:13px;">
+    {chip}{reason_html}
+  </td>
+</tr>
+"""
+
+
 def _build_html(
     conversation: Conversation,
     org: Organization,
     preview: str,
     messages: list[Message],
+    contact: "Contact | None" = None,
 ) -> str:
     naam     = conversation.wa_contact_name or "Onbekend"
     telefoon = conversation.wa_contact_phone
@@ -139,6 +179,7 @@ def _build_html(
         <!-- Info tabel -->
         <table width="100%" cellpadding="0" cellspacing="0"
                style="border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;margin-bottom:24px;">
+          {_score_row(contact)}
           {_info_row('👤 Naam',     naam)}
           {_info_row('📱 Telefoon', telefoon)}
           {_info_row('🏢 Klant',    org.name)}
