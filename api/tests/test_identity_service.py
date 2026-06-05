@@ -6,6 +6,7 @@ Bevat de VERPLICHTE canonicalisatie-test: de drie vormen van hetzelfde Belgische
 zowel op normalize_phone-niveau als end-to-end via resolve_contact (één Contact).
 """
 import json
+import os
 
 import pytest
 import pytest_asyncio
@@ -89,25 +90,71 @@ def test_score_lauw():
 
 @pytest_asyncio.fixture
 async def session():
-    pytest.importorskip("aiosqlite")
-    from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
-    from sqlalchemy.pool import StaticPool
+    """
+    Levert een AsyncSession voor de resolve_contact-tests.
+
+    Twee backends:
+      - Standaard: in-memory SQLite (geen externe DB nodig — geschikt voor CI).
+      - Tegen echte Postgres wanneer IDENTITY_TEST_DB gezet is (bv. de lokale dev-DB
+        `postgresql://repto:repto_dev@localhost:5432/repto`). Dit valideert óók de
+        FK-handhaving `contacts.org_id → organizations` die SQLite niet afdwingt.
+
+    De Postgres-variant draait alles binnen één transactie met `create_savepoint`, zodat
+    de interne `commit()`-calls van resolve_contact savepoints worden i.p.v. echte commits;
+    de teardown rolt de hele transactie terug → de dev-DB blijft ongewijzigd.
+    """
+    from sqlalchemy.ext.asyncio import (
+        create_async_engine, async_sessionmaker, AsyncSession,
+    )
     from app.database import Base
     import app.models.conversation  # noqa: F401 — registreer modellen op Base.metadata
+    from app.models.conversation import Organization
 
-    # StaticPool + één gedeelde connectie: zonder dit krijgt elke connectie een eigen
-    # lege in-memory DB en vindt de sessie de net-aangemaakte tabellen niet.
-    engine = create_async_engine(
-        "sqlite+aiosqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    maker = async_sessionmaker(engine, expire_on_commit=False)
-    async with maker() as s:
-        yield s
-    await engine.dispose()
+    pg_url = os.environ.get("IDENTITY_TEST_DB")
+
+    if pg_url:
+        # ── End-to-end tegen echte Postgres ──
+        if pg_url.startswith("postgresql://"):
+            pg_url = pg_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        engine = create_async_engine(pg_url)
+        conn = await engine.connect()
+        trans = await conn.begin()
+        s = AsyncSession(
+            bind=conn, join_transaction_mode="create_savepoint", expire_on_commit=False
+        )
+        # Orgs zaaien zodat de FK contacts.org_id → organizations voldaan is.
+        for oid in ("org-1", "org-2"):
+            s.add(Organization(id=oid, name=oid))
+        await s.flush()
+        try:
+            yield s
+        finally:
+            await s.close()
+            await trans.rollback()
+            await conn.close()
+            await engine.dispose()
+    else:
+        # ── Standaard: in-memory SQLite ──
+        pytest.importorskip("aiosqlite")
+        from sqlalchemy.pool import StaticPool
+
+        # StaticPool + één gedeelde connectie: zonder dit krijgt elke connectie een eigen
+        # lege in-memory DB en vindt de sessie de net-aangemaakte tabellen niet.
+        engine = create_async_engine(
+            "sqlite+aiosqlite:///:memory:",
+            connect_args={"check_same_thread": False},
+            poolclass=StaticPool,
+        )
+        async with engine.begin() as c:
+            await c.run_sync(Base.metadata.create_all)
+        maker = async_sessionmaker(engine, expire_on_commit=False)
+        async with maker() as s:
+            # Orgs zaaien (FK is uit op SQLite, maar houdt beide backends identiek).
+            for oid in ("org-1", "org-2"):
+                s.add(Organization(id=oid, name=oid))
+            await s.commit()
+            yield s
+        await engine.dispose()
 
 
 @pytest.mark.asyncio
