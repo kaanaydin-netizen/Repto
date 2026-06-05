@@ -14,8 +14,9 @@ import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.config import get_settings
-from app.models.conversation import Conversation, Message, Organization, CrmSyncLog
+from app.models.conversation import Conversation, Message, Organization, CrmSyncLog, Contact
 from app.services.crm_sync_service import CrmSyncService
+from app.services.identity_service import resolve_contact, normalize_email, compute_lead_score
 
 settings = get_settings()
 logger = logging.getLogger(__name__)
@@ -84,6 +85,17 @@ class WhatsAppService:
                 status="new",
             )
             self.db.add(conversation)
+            await self.db.commit()
+            await self.db.refresh(conversation)
+
+        # Kanaal-overschrijdende identiteit: koppel (of maak) het Contact voor deze persoon
+        # en zet contact_id. Match op genormaliseerd telefoonnummer binnen de org.
+        contact = await resolve_contact(
+            self.db, org.id,
+            phone=contact_phone, name=contact_name, channel="whatsapp",
+        )
+        if conversation.contact_id != contact.id:
+            conversation.contact_id = contact.id
             await self.db.commit()
             await self.db.refresh(conversation)
 
@@ -190,7 +202,52 @@ class WhatsAppService:
         }
         return await self._post(sender, payload)
 
-    async def sync_to_crm(self, conversation: Conversation) -> None:
+    async def extract_and_enrich(self, conversation: Conversation) -> Optional[dict]:
+        """
+        CRM-ONAFHANKELIJKE verrijking: extraheer de lead-data één keer, verrijk het
+        gekoppelde Contact (e-mail + warm/lauw/koud-score) en geef de lead-dict terug,
+        zodat de notificatie én de CRM-sync exact dezelfde extractie hergebruiken
+        (coherente score — geen tweede, mogelijk afwijkende Haiku-call).
+
+        Draait LOS van de crm_type-branch — anders zou de identiteits-/score-ruggengraat
+        inert blijven voor orgs met crm_type='none'. Gate: ≥3 berichten (zelfde drempel
+        als de CRM-sync). Geeft None terug als er nog te weinig berichten zijn.
+        """
+        try:
+            msgs_result = await self.db.execute(
+                select(Message)
+                .where(Message.conversation_id == conversation.id)
+                .order_by(Message.sent_at.asc())
+            )
+            messages = list(msgs_result.scalars().all())
+            if len(messages) < 3:
+                return None
+
+            lead = await self.crm_sync._extract_lead_data(messages)
+
+            if conversation.contact_id:
+                contact_result = await self.db.execute(
+                    select(Contact).where(Contact.id == conversation.contact_id)
+                )
+                contact = contact_result.scalar_one_or_none()
+                if contact:
+                    norm_email = normalize_email(lead.get("email"))
+                    if norm_email and not contact.email:
+                        contact.email = norm_email
+                    score, reason = compute_lead_score(lead)
+                    contact.score = score
+                    contact.score_reason = reason
+                    await self.db.commit()
+                    await self.db.refresh(contact)
+
+            return lead
+
+        except Exception as e:
+            # Niet-kritisch: een fout hier mag de reply/notificatie/sync nooit blokkeren.
+            logger.error("extract_and_enrich fout voor gesprek %s: %s", conversation.id, e)
+            return None
+
+    async def sync_to_crm(self, conversation: Conversation, lead: Optional[dict] = None) -> None:
         """
         Synchroniseer het gesprek naar het geconfigureerde CRM.
 
@@ -199,6 +256,8 @@ class WhatsAppService:
           heeft kunnen verzamelen) voordat de eerste sync plaatsvindt.
         - Bij elke volgende sync wordt het bestaande Airtable-record bijgewerkt (upsert),
           zodat de lead altijd up-to-date is terwijl het gesprek vordert.
+        - lead: een reeds geëxtraheerde lead-dict (van extract_and_enrich) zodat extractie
+          niet dubbel gebeurt; None → de sync extraheert zelf (standalone-pad).
         """
         org_result = await self.db.execute(
             select(Organization).where(Organization.id == conversation.org_id)
@@ -236,4 +295,5 @@ class WhatsAppService:
             org=org,
             existing_record_id=existing_record_id,
             existing_log_id=existing_log_id,
+            lead=lead,
         )

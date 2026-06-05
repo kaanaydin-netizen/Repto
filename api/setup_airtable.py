@@ -89,6 +89,11 @@ def main():
                                   {"name": "in_progress"},
                                   {"name": "appointment_set"},
                                   {"name": "closed"}]}},
+        {"name": "Score",          "type": "singleSelect",
+         "options": {"choices": [{"name": "Warm", "color": "redBright"},
+                                  {"name": "Lauw", "color": "yellowBright"},
+                                  {"name": "Koud", "color": "blueBright"}]}},
+        {"name": "Score Reden",    "type": "multilineText"},
         {"name": "Datum",          "type": "singleLineText"},
         {"name": "Eerste Bericht", "type": "multilineText"},
     ]

@@ -188,14 +188,9 @@ async def process_incoming_message(
             conversation_closed = CLOSING_TAG in reply
             clean_reply = reply.replace(CLOSING_TAG, "").strip()
 
-            if conversation_closed:
-                conversation.status = "closed"
-                await db.commit()
-                await db.refresh(conversation)
-                # E-mailnotificatie naar agency (faalt stil als niet geconfigureerd)
-                await send_lead_notification(conversation=conversation, db=db)
-
-            # Antwoord versturen via Meta, vanaf het nummer waarop het binnenkwam
+            # Antwoord EERST versturen + opslaan — verrijking/scoring mag de klant-reply
+            # niet vertragen of (bij een DB-hapering) blokkeren. Daarna pas de
+            # niet-kritische stappen.
             await wa_service.send_message(
                 to_phone=from_phone,
                 message=clean_reply,
@@ -209,7 +204,19 @@ async def process_incoming_message(
                 ai_generated=True,
             )
 
-            await wa_service.sync_to_crm(conversation=conversation)
+            # CRM-onafhankelijke verrijking + scoring (één extractie, off-path). Draait
+            # vóór de notificatie zodat de e-mail de score kan tonen, en levert de lead-dict
+            # die de CRM-sync hergebruikt. None = nog te weinig berichten.
+            lead = await wa_service.extract_and_enrich(conversation)
+
+            if conversation_closed:
+                conversation.status = "closed"
+                await db.commit()
+                await db.refresh(conversation)
+                # E-mailnotificatie naar agency (faalt stil als niet geconfigureerd)
+                await send_lead_notification(conversation=conversation, db=db)
+
+            await wa_service.sync_to_crm(conversation=conversation, lead=lead)
 
         except Exception as e:
             logger.error("❌ Fout bij verwerking bericht van %s: %s", from_phone, e)

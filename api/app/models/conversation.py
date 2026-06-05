@@ -26,6 +26,30 @@ class CrmType(str, enum.Enum):
     none = "none"
 
 
+class Contact(Base):
+    """
+    Eén persoon = één lead, kanaal-overschrijdend (dossier §3.3, kerndifferentiator).
+    Meerdere gesprekken (ook over meerdere kanalen) mappen op één Contact via match op
+    genormaliseerde e-mail OF telefoon. email/phone worden GENORMALISEERD opgeslagen
+    (zie identity_service.normalize_email / normalize_phone) zodat matching betrouwbaar is.
+    """
+    __tablename__ = "contacts"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    org_id: Mapped[str] = mapped_column(String, ForeignKey("organizations.id"), nullable=False)
+    name: Mapped[Optional[str]] = mapped_column(String)
+    email: Mapped[Optional[str]] = mapped_column(String)          # genormaliseerd (lowercase/trim)
+    phone: Mapped[Optional[str]] = mapped_column(String)          # genormaliseerd (wa_id-vorm: int. zonder '+')
+    first_channel: Mapped[Optional[str]] = mapped_column(String)  # bv. "whatsapp"
+    channels_json: Mapped[str] = mapped_column(Text, default="[]")  # JSON-lijst van kanalen
+    score: Mapped[Optional[str]] = mapped_column(String)          # "warm" | "lauw" | "koud"
+    score_reason: Mapped[Optional[str]] = mapped_column(Text)
+    created_at: Mapped[DateTime] = mapped_column(DateTime, server_default=func.now())
+    updated_at: Mapped[DateTime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    conversations: Mapped[List["Conversation"]] = relationship(back_populates="contact")
+
+
 class Organization(Base):
     __tablename__ = "organizations"
 
@@ -53,6 +77,7 @@ class Conversation(Base):
 
     id: Mapped[str] = mapped_column(String, primary_key=True)
     org_id: Mapped[str] = mapped_column(String, ForeignKey("organizations.id"), nullable=False)
+    contact_id: Mapped[Optional[str]] = mapped_column(String, ForeignKey("contacts.id"), nullable=True)
     wa_contact_phone: Mapped[str] = mapped_column(String, nullable=False)
     wa_contact_name: Mapped[Optional[str]] = mapped_column(String)
     status: Mapped[str] = mapped_column(String, default="new")
@@ -61,6 +86,7 @@ class Conversation(Base):
     updated_at: Mapped[DateTime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
 
     organization: Mapped["Organization"] = relationship(back_populates="conversations")
+    contact: Mapped[Optional["Contact"]] = relationship(back_populates="conversations")
     messages: Mapped[List["Message"]] = relationship(back_populates="conversation")
     appointments: Mapped[List["Appointment"]] = relationship(back_populates="conversation")
     followup_tasks: Mapped[List["FollowupTask"]] = relationship(back_populates="conversation")
