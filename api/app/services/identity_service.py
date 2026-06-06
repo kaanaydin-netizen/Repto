@@ -15,10 +15,10 @@ import re
 import uuid
 from typing import Optional, Tuple
 
-from sqlalchemy import select, or_
+from sqlalchemy import select, or_, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.conversation import Contact
+from app.models.conversation import Contact, Conversation
 
 # Standaard landcode voor nationale nummers zonder landcode (KMO-markt = België).
 _DEFAULT_COUNTRY_CODE = "32"
@@ -77,10 +77,10 @@ async def resolve_contact(
     Match op genormaliseerde e-mail OF telefoon (dossier §3.3). Bij een match worden
     ontbrekende velden aangevuld en het kanaal toegevoegd. Geen match → nieuw Contact.
 
-    Scope-grens increment 1 (bewust): het geval waarin e-mail Contact B matcht terwijl
-    telefoon Contact A matchte (= twee bestaande contacten samenvoegen) wordt NIET
-    afgehandeld — dat kan pas optreden zodra er een tweede kanaal (e-mail) bestaat en is
-    uitgesteld naar de multi-channel increment.
+    Botsingsgeval (increment 2): wanneer e-mail Contact B matcht terwijl telefoon
+    Contact A matchte (A≠B, twee bestaande contacten), worden ze SAMENGEVOEGD i.p.v.
+    willekeurig één te kiezen. Dit kan optreden zodra een tweede kanaal (web/e-mail)
+    een persoon aanbrengt die al via WhatsApp bekend was. Zie _merge_contacts.
     """
     norm_email = normalize_email(email)
     norm_phone = normalize_phone(phone)
@@ -95,7 +95,12 @@ async def resolve_contact(
         result = await db.execute(
             select(Contact).where(Contact.org_id == org_id, or_(*conditions))
         )
-        contact = result.scalars().first()
+        matches = list(result.scalars().all())
+        if len(matches) > 1:
+            # e-mail en telefoon wijzen naar verschillende contacten → samenvoegen.
+            contact = await _merge_contacts(db, matches)
+        elif matches:
+            contact = matches[0]
 
     if contact:
         changed = False
@@ -141,6 +146,59 @@ def _load_channels(raw: Optional[str]) -> list:
         return val if isinstance(val, list) else []
     except (ValueError, TypeError):
         return []
+
+
+async def _merge_contacts(db: AsyncSession, matches: list) -> Contact:
+    """
+    Voeg meerdere Contacts (e-mail wees naar B, telefoon naar A) samen tot één.
+
+    De WINNAAR is het oudste contact (eerst aangemaakt → langste historiek). Alle
+    verliezers worden erin opgenomen:
+      - channels_json wordt de UNIE van alle kanalen;
+      - ontbrekende velden op de winnaar (email/phone/name/score/score_reason)
+        worden aangevuld vanuit een verliezer;
+      - alle conversations.contact_id van de verliezers worden HERKOPPELD naar de
+        winnaar (Conversation.contact_id is de enige FK naar contacts.id);
+      - de verliezer-rij wordt verwijderd.
+
+    Geen commit hier — de aanroeper (resolve_contact) commit samen met de verdere
+    verrijking, zodat de hele merge één transactie is.
+    """
+    # Oudste eerst (langste historiek). created_at kan vóór flush None zijn → die
+    # contacten achteraan, tiebreak op id zodat de keuze deterministisch is.
+    dated = [c for c in matches if c.created_at is not None]
+    if dated:
+        winner = min(dated, key=lambda c: (c.created_at, c.id))
+    else:
+        winner = min(matches, key=lambda c: c.id)
+
+    channels = _load_channels(winner.channels_json)
+    for loser in matches:
+        if loser.id == winner.id:
+            continue
+        for ch in _load_channels(loser.channels_json):
+            if ch not in channels:
+                channels.append(ch)
+        if not winner.email and loser.email:
+            winner.email = loser.email
+        if not winner.phone and loser.phone:
+            winner.phone = loser.phone
+        if not winner.name and loser.name:
+            winner.name = loser.name
+        if not winner.score and loser.score:
+            winner.score = loser.score
+            winner.score_reason = loser.score_reason
+        # Herkoppel de gesprekken van de verliezer en verwijder de verliezer.
+        await db.execute(
+            update(Conversation)
+            .where(Conversation.contact_id == loser.id)
+            .values(contact_id=winner.id)
+        )
+        await db.delete(loser)
+
+    winner.channels_json = json.dumps(channels)
+    await db.flush()
+    return winner
 
 
 # ─── Lead-scoring (warm / lauw / koud) ──────────────────────────────────────────

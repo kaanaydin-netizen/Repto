@@ -16,7 +16,8 @@ from sqlalchemy import select
 from app.config import get_settings
 from app.models.conversation import Conversation, Message, Organization, CrmSyncLog, Contact
 from app.services.crm_sync_service import CrmSyncService
-from app.services.identity_service import resolve_contact, normalize_email, compute_lead_score
+from app.services.identity_service import normalize_email, compute_lead_score
+from app.services.lead_intake_service import create_or_update_conversation
 
 settings = get_settings()
 logger = logging.getLogger(__name__)
@@ -65,41 +66,12 @@ class WhatsAppService:
                 f"Koppel dit nummer aan een organisatie (zie seed_dev.py)."
             )
 
-        # Bestaand open gesprek zoeken
-        conv_result = await self.db.execute(
-            select(Conversation).where(
-                Conversation.org_id == org.id,
-                Conversation.wa_contact_phone == contact_phone,
-                Conversation.status.in_(["new", "in_progress"]),
-            )
+        # Conversatie + kanaal-overschrijdende identiteit via de gedeelde intake-helper,
+        # zodat WhatsApp identiek door dezelfde poort loopt als web-form/e-mail/web-chat.
+        return await create_or_update_conversation(
+            self.db, org,
+            channel="whatsapp", name=contact_name, phone=contact_phone,
         )
-        conversation = conv_result.scalar_one_or_none()
-
-        if not conversation:
-            # Nieuw gesprek aanmaken
-            conversation = Conversation(
-                id=str(uuid.uuid4()),
-                org_id=org.id,
-                wa_contact_phone=contact_phone,
-                wa_contact_name=contact_name,
-                status="new",
-            )
-            self.db.add(conversation)
-            await self.db.commit()
-            await self.db.refresh(conversation)
-
-        # Kanaal-overschrijdende identiteit: koppel (of maak) het Contact voor deze persoon
-        # en zet contact_id. Match op genormaliseerd telefoonnummer binnen de org.
-        contact = await resolve_contact(
-            self.db, org.id,
-            phone=contact_phone, name=contact_name, channel="whatsapp",
-        )
-        if conversation.contact_id != contact.id:
-            conversation.contact_id = contact.id
-            await self.db.commit()
-            await self.db.refresh(conversation)
-
-        return conversation
 
     async def save_message(
         self,

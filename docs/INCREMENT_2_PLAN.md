@@ -35,6 +35,32 @@ kanaal in hetzelfde klantprofiel belandt (dossier §3.2–§3.3).
 
 ---
 
+## Status — fundament A–C AFGEROND (2026-06-06), wacht op sign-off
+
+Branch `feat/multichannel-intake`. Suite groen (51 passed) op SQLite én op echte Postgres
+(scratch-DB op rev 004) voor de identity-tests.
+
+- **A — datamodel** ✅ `Conversation.wa_contact_phone` nu nullable + nieuwe `channel`-kolom
+  (default `"whatsapp"`). Migratie `004` round-trip bewezen op scratch-Postgres
+  (upgrade → channel NOT NULL + phone nullable; downgrade keert beide om; re-upgrade ok).
+- **B — gedeelde intake + merge** ✅ Nieuw `lead_intake_service.create_or_update_conversation`
+  (contact-gekeyd, kanaal-agnostisch); WhatsApp-pad loopt er nu doorheen. `resolve_contact`
+  voegt het botsingsgeval (e-mail→B, telefoon→A) nu SAMEN (`_merge_contacts`: oudste wint,
+  kanalen-unie, gesprekken herkoppeld, verliezer verwijderd). Tests: merge-botsing +
+  regressievangnet "terugkerende WhatsApp-klant → zelfde gesprek".
+- **C — Airtable per-persoon** ✅ (CODE) merge-key `conversation.id` → `contact.id`;
+  Naam/Telefoon/E-mail uit het `Contact` (val terug op `conversation.wa_contact_*`).
+
+> ⚠️ **DEPLOY-CONSTRAINT (C) — kop, geen voetnoot.** C's code mag NIET naar productie vóór
+> de Airtable-backfill draait. De oude live records zijn op `conversation.id` gekeyd; de
+> nieuwe upsert keyt op `contact.id` → zonder backfill ontstaan **duplicaat-records**.
+> `api/backfill_airtable_contact_key.py` (dry-run default) verzorgt de gate + herkoppeling,
+> maar is **PROVISIONEEL en ongetest tegen echte Airtable-data** — eerst de gate-output
+> nalezen, dan pas `--apply`, en pas ná sign-off. **Deploy-volgorde:** migraties `003`+`004`
+> op Supabase (prod staat op `002`) → backfill `--apply` → dan pas de nieuwe code live.
+
+---
+
 ## Huidige relevante structuur (gevonden)
 
 - `api/app/models/conversation.py:75` — `Conversation`; `wa_contact_phone` (regel 81) is

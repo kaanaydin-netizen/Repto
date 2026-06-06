@@ -78,7 +78,11 @@ class Conversation(Base):
     id: Mapped[str] = mapped_column(String, primary_key=True)
     org_id: Mapped[str] = mapped_column(String, ForeignKey("organizations.id"), nullable=False)
     contact_id: Mapped[Optional[str]] = mapped_column(String, ForeignKey("contacts.id"), nullable=True)
-    wa_contact_phone: Mapped[str] = mapped_column(String, nullable=False)
+    # Kanaal-agnostisch sinds increment 2: een web-/e-maillead heeft geen telefoonnummer.
+    # "whatsapp" | "email" | "web_form" | "web_chat". Het canonieke nummer leeft op Contact.phone.
+    channel: Mapped[str] = mapped_column(String, nullable=False, default="whatsapp", server_default="whatsapp")
+    # wa_contact_phone/-name = het nummer/naam zoals DIT kanaal het kent (NULL voor web/e-mail).
+    wa_contact_phone: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     wa_contact_name: Mapped[Optional[str]] = mapped_column(String)
     status: Mapped[str] = mapped_column(String, default="new")
     crm_synced_at: Mapped[Optional[DateTime]] = mapped_column(DateTime)

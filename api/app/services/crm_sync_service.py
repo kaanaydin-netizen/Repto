@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.config import get_settings
-from app.models.conversation import Conversation, Organization, CrmSyncLog, Message, Appointment
+from app.models.conversation import Conversation, Organization, CrmSyncLog, Message, Appointment, Contact
 from app.services.ai_service import _NL_DAGEN, _NL_MAANDEN
 from app.services.identity_service import compute_lead_score
 
@@ -84,7 +84,8 @@ class CrmSyncService:
 
             await self.db.commit()
             action = "bijgewerkt" if existing_record_id else "aangemaakt"
-            logger.info(f"✅ CRM sync ({action}): {conversation.wa_contact_phone} → {org.crm_type} [{external_id}]")
+            who = conversation.wa_contact_phone or conversation.contact_id or conversation.id
+            logger.info(f"✅ CRM sync ({action}): {who} → {org.crm_type} [{external_id}]")
 
         except Exception as e:
             if existing_log_id:
@@ -240,6 +241,25 @@ class CrmSyncService:
         appointments = list(appt_result.scalars().all())
         has_appointment = len(appointments) > 0
 
+        # Eén Airtable-record per PERSOON (Contact), niet per gesprek: meerdere gesprekken/
+        # kanalen van dezelfde persoon mergen op contact.id. Identiteitsvelden komen van het
+        # Contact (kanaal-overschrijdend, genormaliseerd) en vallen terug op de kanaal-specifieke
+        # conversation.wa_contact_* — die NULL kan zijn voor web-/e-mailleads.
+        contact = None
+        if conversation.contact_id:
+            contact_result = await self.db.execute(
+                select(Contact).where(Contact.id == conversation.contact_id)
+            )
+            contact = contact_result.scalar_one_or_none()
+        # Defensief: zonder Contact (mag niet voorkomen na migratie 003) valt de merge-key
+        # terug op conversation.id — log het, want het duidt op een ontkoppelde rij.
+        bron_id = contact.id if contact else conversation.id
+        if not contact:
+            logger.warning(
+                "Airtable-sync zonder Contact voor gesprek %s — merge-key valt terug op conversation.id",
+                conversation.id,
+            )
+
         first_contact = conversation.created_at or datetime.now()
         # Type werk + samenvatting samengevoegd in één veld (formaat "Type werk — samenvatting").
         samenvatting = _combine_type_en_samenvatting(lead.get("type_werk"), lead.get("samenvatting"))
@@ -247,11 +267,11 @@ class CrmSyncService:
         # contact-verrijking) — Airtable single-select verwacht hoofdletter (Warm/Lauw/Koud).
         score, score_reason = compute_lead_score(lead)
         lead_fields = {
-            "Bron ID": conversation.id,
-            "Naam": lead.get("naam") or conversation.wa_contact_name or "Onbekend",
-            "Telefoon": conversation.wa_contact_phone,
+            "Bron ID": bron_id,
+            "Naam": lead.get("naam") or (contact.name if contact else None) or conversation.wa_contact_name or "Onbekend",
+            "Telefoon": (contact.phone if contact else None) or conversation.wa_contact_phone or "",
             "Adres": lead.get("adres") or "",
-            "E-mail": lead.get("email") or "",
+            "E-mail": lead.get("email") or (contact.email if contact else None) or "",
             "Gewenste Datum": lead.get("gewenste_datum") or "",
             "Status": _pipeline_status(conversation, has_appointment, lead),
             "Intentie": lead.get("intentie") or "Anders",

@@ -191,6 +191,90 @@ async def test_resolve_contact_org_isolatie(session):
     assert c1.id != c2.id
 
 
+# ─── merge-botsing (increment 2 — verplicht) ────────────────────────────────────
+
+@pytest.mark.asyncio
+async def test_resolve_contact_merge_collision(session):
+    """
+    Botsingsgeval: telefoon matcht Contact A, e-mail matcht Contact B (A≠B).
+    Een derde inkomst met BEIDE sleutels moet A en B samenvoegen tot één Contact,
+    de gesprekken van de verliezer herkoppelen, de verliezer verwijderen en de
+    kanalen verenigen — i.p.v. willekeurig één contact te kiezen.
+    """
+    from sqlalchemy import select as _select, or_ as _or
+    from app.models.conversation import Conversation, Contact
+
+    # A: enkel telefoon (WhatsApp). B: enkel e-mail (web-form). Verschillende contacten.
+    a = await resolve_contact(session, "org-1", phone="32470111222", name="Jan", channel="whatsapp")
+    b = await resolve_contact(session, "org-1", email="jan@x.be", channel="web_form")
+    assert a.id != b.id
+
+    # Eén gesprek aan elk contact koppelen om de herkoppeling te kunnen verifiëren.
+    session.add(Conversation(
+        id="cv-a", org_id="org-1", contact_id=a.id, channel="whatsapp", wa_contact_phone="32470111222",
+    ))
+    session.add(Conversation(
+        id="cv-b", org_id="org-1", contact_id=b.id, channel="web_form",
+    ))
+    await session.commit()
+
+    # Derde inkomst met telefoon ÉN e-mail → merge tot één contact. Wie de "winnaar"
+    # is hangt af van created_at (oudste); de invariant geldt ongeacht wie wint.
+    merged = await resolve_contact(
+        session, "org-1", phone="32470111222", email="jan@x.be", channel="email",
+    )
+    winner_id = merged.id
+    loser_id = b.id if winner_id == a.id else a.id
+    assert winner_id in (a.id, b.id)
+
+    assert merged.email == "jan@x.be"              # beide sleutels op één contact
+    assert merged.phone == "32470111222"
+    assert set(json.loads(merged.channels_json)) == {"whatsapp", "web_form", "email"}
+
+    # Precies één contact over (verliezer verwijderd), geen duplicaat.
+    contacts = (await session.execute(
+        _select(Contact).where(Contact.org_id == "org-1")
+    )).scalars().all()
+    assert [c.id for c in contacts] == [winner_id]
+    assert loser_id not in [c.id for c in contacts]
+
+    # Beide gesprekken herkoppeld aan de winnaar. populate_existing forceert verse
+    # herlading — de Core-UPDATE in _merge_contacts is niet zichtbaar in de identity-map.
+    convs = (await session.execute(
+        _select(Conversation)
+        .where(Conversation.org_id == "org-1")
+        .execution_options(populate_existing=True)
+    )).scalars().all()
+    assert {c.id for c in convs} == {"cv-a", "cv-b"}
+    assert all(c.contact_id == winner_id for c in convs)
+
+
+# ─── gemigreerde WhatsApp-poort (regressievangnet) ──────────────────────────────
+
+@pytest.mark.asyncio
+async def test_whatsapp_returning_customer_same_conversation(session):
+    """
+    De WhatsApp-flow loopt sinds increment 2 via de gedeelde intake-helper
+    (contact-gekeyd i.p.v. nummer-gekeyd). Een terugkerende klant met een open
+    gesprek moet HETZELFDE gesprek terugkrijgen — geen duplicaat. Een ander
+    nummer levert wél een nieuw gesprek op.
+    """
+    from app.models.conversation import Organization
+    from app.services.whatsapp_service import WhatsAppService
+
+    org = await session.get(Organization, "org-1")
+    org.whatsapp_phone_number_id = "pnid-1"
+    await session.commit()
+
+    wa = WhatsAppService(db=session)
+    c1 = await wa.get_or_create_conversation("pnid-1", "32470555000", "Piet")
+    c2 = await wa.get_or_create_conversation("pnid-1", "32470555000", "Piet")
+    assert c1.id == c2.id                          # zelfde open gesprek
+
+    c3 = await wa.get_or_create_conversation("pnid-1", "32470555999", None)
+    assert c3.id != c1.id                          # ander nummer → nieuw gesprek
+
+
 # ─── scoring is CRM-onafhankelijk (DoD item 4) ──────────────────────────────────
 
 @pytest.mark.asyncio

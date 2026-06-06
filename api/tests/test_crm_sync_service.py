@@ -157,11 +157,17 @@ async def test_sync_airtable_includes_score(monkeypatch):
     monkeypatch.setattr(mod.httpx, "AsyncClient", _CaptureClient)
 
     svc = CrmSyncService.__new__(CrmSyncService)  # geen anthropic-client nodig
-    # appointments-query → lege lijst (lead wordt meegegeven, dus geen messages-query)
+    # _sync_airtable doet sinds increment 2 TWEE db-queries: eerst de appointments, dan het
+    # Contact (voor de merge-key + identiteitsvelden). side_effect levert ze in die volgorde.
+    contact = SimpleNamespace(
+        id="ct-1", name="Jan Janssen", phone="32470123456", email="jan@x.be",
+    )
+    contact_result = MagicMock()
+    contact_result.scalar_one_or_none.return_value = contact
     appt_result = MagicMock()
     appt_result.scalars.return_value.all.return_value = []
     svc.db = MagicMock()
-    svc.db.execute = AsyncMock(return_value=appt_result)
+    svc.db.execute = AsyncMock(side_effect=[appt_result, contact_result])
 
     org = SimpleNamespace(
         crm_type="airtable",
@@ -170,10 +176,10 @@ async def test_sync_airtable_includes_score(monkeypatch):
         ),
     )
     conv = SimpleNamespace(
-        id="conv-1", wa_contact_name="Jan", wa_contact_phone="32470123456",
+        id="conv-1", contact_id="ct-1", wa_contact_name="Jan", wa_contact_phone="32470123456",
         created_at=datetime.now(), status="new",
     )
-    # Warme lead: koopintentie + hoge urgentie + datum.
+    # Warme lead: koopintentie + hoge urgentie + datum. email=None → moet terugvallen op Contact.
     lead = {
         "naam": "Jan", "adres": None, "email": None, "type_werk": "keuring",
         "gewenste_datum": "2026-06-10", "urgentie": "Hoog", "intentie": "Offerte",
@@ -187,3 +193,7 @@ async def test_sync_airtable_includes_score(monkeypatch):
     fields = _CaptureClient.calls[0]["records"][0]["fields"]
     assert fields["Score"] == "Warm"          # single-select hoofdletter
     assert fields["Score Reden"]              # niet-lege transparante reden
+    # Per-persoon keying: merge-key = contact.id (niet conversation.id).
+    assert fields["Bron ID"] == "ct-1"
+    assert fields["Telefoon"] == "32470123456"   # uit Contact
+    assert fields["E-mail"] == "jan@x.be"        # lead.email leeg → val terug op Contact
