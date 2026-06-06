@@ -189,3 +189,49 @@ async def test_resolve_contact_org_isolatie(session):
     c1 = await resolve_contact(session, "org-1", phone="32470000020", channel="whatsapp")
     c2 = await resolve_contact(session, "org-2", phone="32470000020", channel="whatsapp")
     assert c1.id != c2.id
+
+
+# ─── scoring is CRM-onafhankelijk (DoD item 4) ──────────────────────────────────
+
+@pytest.mark.asyncio
+async def test_extract_and_enrich_scoort_ook_zonder_crm(session):
+    """De score belandt op het Contact óók voor een org met crm_type='none'.
+
+    `extract_and_enrich` draait bewust LOS van de crm_type-branch (webhooks roept het
+    onvoorwaardelijk aan, vóór `sync_to_crm` dat bij crm_type='none' vroeg terugkeert).
+    Deze test pint dat vast: zonder CRM krijgt het Contact alsnog warm/lauw/koud + reden,
+    zodat de identiteits-/score-ruggengraat niet inert blijft voor niet-Airtable-orgs.
+    """
+    from unittest.mock import AsyncMock
+
+    from app.models.conversation import Organization, Contact, Conversation, Message
+    from app.services.whatsapp_service import WhatsAppService
+
+    org = await session.get(Organization, "org-1")
+    org.crm_type = "none"  # expliciet: geen CRM geconfigureerd
+
+    contact = Contact(
+        id="ct-score", org_id="org-1", phone="32470000099", channels_json='["whatsapp"]'
+    )
+    conv = Conversation(
+        id="cv-score", org_id="org-1", contact_id="ct-score", wa_contact_phone="32470000099"
+    )
+    session.add_all([contact, conv])
+    for i in range(3):  # ≥3 berichten = de verrijkingsdrempel
+        session.add(Message(
+            id=f"m{i}", conversation_id="cv-score", direction="inbound", content=f"bericht {i}"
+        ))
+    await session.flush()
+
+    wa = WhatsAppService(db=session)
+    # Geen echte Haiku-extractie: lever een warme lead-dict.
+    wa.crm_sync._extract_lead_data = AsyncMock(return_value={
+        "intentie": "Offerte", "urgentie": "Hoog", "gewenste_datum": None, "email": None,
+    })
+
+    lead = await wa.extract_and_enrich(conv)
+
+    assert lead is not None
+    refreshed = await session.get(Contact, "ct-score")
+    assert refreshed.score == "warm"
+    assert refreshed.score_reason  # transparante reden meegeschreven
