@@ -155,9 +155,17 @@ van het `Contact` (val terug op `conversation.wa_contact_*`).
   Resend-mail; bij `not_configured`/fout een nette fallback.
 - **email_service**: notificatie sourcet `naam`/`telefoon`/`email` van het `Contact` (val terug
   op `conversation.wa_contact_*`), en toont het `channel`-label.
+- **Runtime-merge laat een Airtable-record achter (verplicht in 2a).** Zodra in 2a/2b zowel
+  e-mail als telefoon binnenkomen, kan `_merge_contacts` vuren: de verliezer-`Contact` wordt
+  verwijderd en zijn gesprekken herkoppeld, maar diens reeds-gesyncte Airtable-record (gekeyd op
+  de óúde `contact.id`) blijft als duplicaat achter. De eenmalige backfill (stap C) vangt enkel
+  de historische migratie, niet merges die dáárna gebeuren. 2a moet de merge daarom het stale
+  record laten opruimen (Airtable-delete van de verliezer-key, of herkoppelen) als onderdeel van
+  `sync_to_crm`. Genoteerd door de reviewer bij oplevering van het fundament.
 - **DoD 2a:** een web-form-POST maakt/updatet één `Contact` + `Conversation(channel=web_form)`,
   zet score, stuurt notificatie; een web-lead met e-mail die later een WhatsApp-contact matcht
-  wordt **één** profiel (merge-test uit B); geen hardcoded org/secrets. **Stop voor sign-off.**
+  wordt **één** profiel (merge-test uit B) **en laat geen duplicaat-record in Airtable achter**;
+  geen hardcoded org/secrets. **Stop voor sign-off.**
 
 ### 2b. E-mail-intake
 

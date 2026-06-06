@@ -22,7 +22,8 @@ class ConversationOut(BaseModel):
 
     id: str
     org_id: str
-    wa_contact_phone: str
+    channel: str
+    wa_contact_phone: Optional[str]   # NULL voor web-/e-mailleads sinds increment 2
     wa_contact_name: Optional[str]
     status: str
     crm_synced_at: Optional[datetime]
