@@ -51,6 +51,24 @@ Branch `feat/multichannel-intake`. Suite groen (51 passed) op SQLite én op echt
 - **C — Airtable per-persoon** ✅ (CODE) merge-key `conversation.id` → `contact.id`;
   Naam/Telefoon/E-mail uit het `Contact` (val terug op `conversation.wa_contact_*`).
 
+### Slice 2a — web-formulier AFGEROND (2026-06-07), wacht op sign-off
+
+Suite groen (57 passed). Nieuw `POST /intake/web-form` (`routers/intake.py`, publiek; org via
+`org_id` in body, gevalideerd → 404; e-mail server-side gevalideerd → 422). Eenmalige inzending:
+score direct op het `Contact`, `crm_sync.sync()` direct aangeroepen (geen ≥3-gate), idempotent
+op `Bron ID=contact.id`, daarna agency-notificatie. Next.js `demo-request` stuurt server-side
+door (`REPTO_API_URL` + `REPTO_INTAKE_ORG_ID`; browser ziet org_id nooit), best-effort met
+marketingmail als fallback. `email_service` toont nu het kanaal-label + Contact-velden.
+
+**Kanaal-overschrijdend profiel ECHT gemaakt (was latent kapot):** `extract_and_enrich` kende
+een nieuw ontdekte e-mail vroeger rechtstreeks toe aan het WhatsApp-contact → twee contacten met
+dezelfde e-mail. Nu loopt dat via `resolve_contact`, zodat een bestaand web/e-mail-contact wordt
+SAMENGEVOEGD. Na een merge ruimt `crm_sync.cleanup_merged_records` het verweesde Airtable-record
+van de verliezer op (+ reset diens `CrmSyncLog`). Getest end-to-end (`test_intake_service.py`).
+
+> **Te configureren vóór 2a live:** `REPTO_INTAKE_ORG_ID` (welke org de demoaanvragen ontvangt)
+> + `REPTO_API_URL` op de web-deploy. Leeg = enkel marketingmail (geen lead-capture).
+
 > ⚠️ **DEPLOY-CONSTRAINT (C) — kop, geen voetnoot.** C's code mag NIET naar productie vóór
 > de Airtable-backfill draait. De oude live records zijn op `conversation.id` gekeyd; de
 > nieuwe upsert keyt op `contact.id` → zonder backfill ontstaan **duplicaat-records**.

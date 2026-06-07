@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from app.config import get_settings
-from app.routers import webhooks, conversations, organizations, appointments
+from app.routers import webhooks, conversations, organizations, appointments, intake
 
 settings = get_settings()
 
@@ -58,6 +58,7 @@ app.include_router(webhooks.router)
 app.include_router(conversations.router)
 app.include_router(organizations.router)
 app.include_router(appointments.router)
+app.include_router(intake.router)
 
 
 @app.get("/")

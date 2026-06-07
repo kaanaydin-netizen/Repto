@@ -108,6 +108,55 @@ class CrmSyncService:
             await self.db.commit()
             logger.error(f"❌ CRM sync mislukt voor gesprek {conversation.id}: {e}")
 
+    async def cleanup_merged_records(self, conversation: Conversation, merged_conv_ids: list) -> None:
+        """
+        Ruim verweesde Airtable-records op na een contact-merge.
+
+        Wanneer twee contacten samensmelten (zie identity_service._merge_contacts), worden de
+        gesprekken van de verliezer herkoppeld naar de winnaar. Hun reeds-gesyncte Airtable-
+        record is nog gekeyd op de óúde contact.id; de volgende upsert keyt op de winnaar
+        (contact.id) en raakt dat oude record niet meer → het zou als duplicaat blijven hangen.
+
+        Daarom: verwijder de Airtable-records van die herkoppelde gesprekken en reset hun
+        CrmSyncLog.external_id, zodat de eerstvolgende sync schoon onder de winnaar-key
+        (her)aanmaakt of merget. Niet-kritisch — fouten worden gelogd, niet doorgegooid.
+        """
+        if not merged_conv_ids:
+            return
+        org_result = await self.db.execute(
+            select(Organization).where(Organization.id == conversation.org_id)
+        )
+        org = org_result.scalar_one_or_none()
+        if not org or org.crm_type != "airtable" or not org.crm_credentials_encrypted:
+            return
+
+        logs_result = await self.db.execute(
+            select(CrmSyncLog).where(CrmSyncLog.conversation_id.in_(merged_conv_ids))
+        )
+        logs = [lg for lg in logs_result.scalars().all() if (lg.external_id or "").startswith("rec")]
+        if not logs:
+            return
+
+        config = json.loads(org.crm_credentials_encrypted)
+        api_key, base_id = config.get("api_key"), config.get("base_id")
+        leads_table = config.get("table_name", "Leads")
+        if not api_key or not base_id:
+            return
+
+        headers = {"Authorization": f"Bearer {api_key}"}
+        async with httpx.AsyncClient(timeout=15) as client:
+            for log in logs:
+                url = f"{AIRTABLE_API_URL}/{base_id}/{quote(leads_table)}/{log.external_id}"
+                try:
+                    resp = await client.delete(url, headers=headers)
+                    if resp.status_code not in (200, 404):
+                        logger.warning("Airtable-cleanup: delete %s gaf %s", log.external_id, resp.status_code)
+                except Exception as e:
+                    logger.warning("Airtable-cleanup: delete %s faalde: %s", log.external_id, e)
+                log.external_id = None  # reset → volgende sync hercreëert/merget onder winnaar-key
+        await self.db.commit()
+        logger.info("🧹 Airtable-cleanup na merge: %d verweesd record(s) opgeruimd.", len(logs))
+
     async def _extract_lead_data(self, messages: list[Message]) -> dict:
         """
         Tweede Claude-aanroep (Haiku) om gestructureerde lead-data

@@ -94,6 +94,13 @@ _SCORE_STYLES = {
     "koud": ("❄️ Koud", "#e0f2fe", "#0369a1"),
 }
 
+_CHANNEL_LABELS = {
+    "whatsapp": "WhatsApp",
+    "web_form": "Webformulier",
+    "email": "E-mail",
+    "web_chat": "Webchat",
+}
+
 
 def _score_row(contact) -> str:
     """Rij met de warm/lauw/koud-score + reden; leeg als er (nog) geen score is."""
@@ -125,8 +132,12 @@ def _build_html(
     messages: list[Message],
     contact: "Contact | None" = None,
 ) -> str:
-    naam     = conversation.wa_contact_name or "Onbekend"
-    telefoon = conversation.wa_contact_phone
+    # Identiteitsvelden kanaal-overschrijdend uit het Contact (val terug op de kanaal-
+    # specifieke conversation.wa_contact_*, die NULL kan zijn voor web-/e-mailleads).
+    naam     = (contact.name if contact else None) or conversation.wa_contact_name or "Onbekend"
+    telefoon = (contact.phone if contact else None) or conversation.wa_contact_phone
+    email    = (contact.email if contact else None)
+    kanaal   = _CHANNEL_LABELS.get(conversation.channel, conversation.channel or "Onbekend")
     datum    = datetime.now().strftime("%d/%m/%Y om %H:%M")
     detail_url = f"{DASHBOARD_URL}/gesprekken/{conversation.id}"
     msg_count  = len(messages)
@@ -173,7 +184,7 @@ def _build_html(
           🎉 {naam} heeft contact opgenomen
         </h1>
         <p style="margin:0 0 24px;color:#6b7280;font-size:14px;">
-          Via WhatsApp · {datum} · {org.name}
+          Via {kanaal} · {datum} · {org.name}
         </p>
 
         <!-- Info tabel -->
@@ -181,7 +192,9 @@ def _build_html(
                style="border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;margin-bottom:24px;">
           {_score_row(contact)}
           {_info_row('👤 Naam',     naam)}
-          {_info_row('📱 Telefoon', telefoon)}
+          {_info_row('📡 Kanaal',   kanaal)}
+          {_info_row('📱 Telefoon', telefoon) if telefoon else ''}
+          {_info_row('📧 E-mail',   email) if email else ''}
           {_info_row('🏢 Klant',    org.name)}
           {_info_row('💬 Berichten', f'{msg_count} berichten gewisseld')}
           <tr>

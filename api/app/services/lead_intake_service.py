@@ -30,6 +30,7 @@ async def create_or_update_conversation(
     name: Optional[str] = None,
     email: Optional[str] = None,
     phone: Optional[str] = None,
+    merged_out: Optional[list] = None,
 ) -> Conversation:
     """
     Koppel deze inkomende lead aan één Contact en één open Conversation binnen `org`.
@@ -42,9 +43,13 @@ async def create_or_update_conversation(
     Voor WhatsApp is dit equivalent (zelfde persoon → zelfde contact → zelfde open
     gesprek). Bewaart het inkomende bericht NIET — dat doet de aanroeper via
     save_message (kanaal-specifieke velden zoals wa_message_id).
+
+    merged_out: optionele lijst die bij een contact-merge de herkoppelde conversation-ids
+    krijgt (voor CRM-cleanup van verweesde records). Zie resolve_contact.
     """
     contact = await resolve_contact(
         db, org.id, email=email, phone=phone, name=name, channel=channel,
+        merged_out=merged_out,
     )
 
     result = await db.execute(

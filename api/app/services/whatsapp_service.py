@@ -16,7 +16,7 @@ from sqlalchemy import select
 from app.config import get_settings
 from app.models.conversation import Conversation, Message, Organization, CrmSyncLog, Contact
 from app.services.crm_sync_service import CrmSyncService
-from app.services.identity_service import normalize_email, compute_lead_score
+from app.services.identity_service import normalize_email, compute_lead_score, resolve_contact
 from app.services.lead_intake_service import create_or_update_conversation
 
 settings = get_settings()
@@ -203,14 +203,31 @@ class WhatsAppService:
                 )
                 contact = contact_result.scalar_one_or_none()
                 if contact:
+                    merged_conv_ids: list = []
                     norm_email = normalize_email(lead.get("email"))
                     if norm_email and not contact.email:
-                        contact.email = norm_email
+                        # Nieuwe e-mail ontdekt in het gesprek. NIET rechtstreeks toewijzen:
+                        # bestaat er al een Contact met deze e-mail (via web/e-mail), dan moeten
+                        # die worden SAMENGEVOEGD — anders krijg je twee contacten met dezelfde
+                        # e-mail (DoD §3 kanaal-overschrijdend profiel). resolve_contact regelt
+                        # zowel het aanvullen (geen match) als de merge (botsing).
+                        contact = await resolve_contact(
+                            self.db, conversation.org_id,
+                            phone=contact.phone, email=norm_email, name=contact.name,
+                            channel=conversation.channel, merged_out=merged_conv_ids,
+                        )
+                        if conversation.contact_id != contact.id:
+                            conversation.contact_id = contact.id
                     score, reason = compute_lead_score(lead)
                     contact.score = score
                     contact.score_reason = reason
                     await self.db.commit()
                     await self.db.refresh(contact)
+
+                    # Na een merge: ruim de verweesde Airtable-records van de verliezer op
+                    # (de upsert op de winnaar-key raakt ze niet → ze zouden blijven hangen).
+                    if merged_conv_ids:
+                        await self.crm_sync.cleanup_merged_records(conversation, merged_conv_ids)
 
             return lead
 

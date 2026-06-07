@@ -70,6 +70,7 @@ async def resolve_contact(
     phone=None,
     name=None,
     channel: str,
+    merged_out: Optional[list] = None,
 ) -> Contact:
     """
     Vind-één-of-maak het Contact voor deze persoon binnen org_id.
@@ -81,6 +82,10 @@ async def resolve_contact(
     Contact A matchte (A≠B, twee bestaande contacten), worden ze SAMENGEVOEGD i.p.v.
     willekeurig één te kiezen. Dit kan optreden zodra een tweede kanaal (web/e-mail)
     een persoon aanbrengt die al via WhatsApp bekend was. Zie _merge_contacts.
+
+    merged_out: als een lijst meegegeven wordt, krijgt die bij een merge de id's van de
+    HERKOPPELDE gesprekken (van de verliezer naar de winnaar) aangevuld. De CRM-laag
+    gebruikt dat om verweesde Airtable-records van de verliezer op te ruimen.
     """
     norm_email = normalize_email(email)
     norm_phone = normalize_phone(phone)
@@ -98,7 +103,7 @@ async def resolve_contact(
         matches = list(result.scalars().all())
         if len(matches) > 1:
             # e-mail en telefoon wijzen naar verschillende contacten → samenvoegen.
-            contact = await _merge_contacts(db, matches)
+            contact = await _merge_contacts(db, matches, merged_out=merged_out)
         elif matches:
             contact = matches[0]
 
@@ -148,7 +153,7 @@ def _load_channels(raw: Optional[str]) -> list:
         return []
 
 
-async def _merge_contacts(db: AsyncSession, matches: list) -> Contact:
+async def _merge_contacts(db: AsyncSession, matches: list, merged_out: Optional[list] = None) -> Contact:
     """
     Voeg meerdere Contacts (e-mail wees naar B, telefoon naar A) samen tot één.
 
@@ -188,6 +193,13 @@ async def _merge_contacts(db: AsyncSession, matches: list) -> Contact:
         if not winner.score and loser.score:
             winner.score = loser.score
             winner.score_reason = loser.score_reason
+        # Verzamel (vóór de repoint) de gesprek-id's van de verliezer, zodat de CRM-laag
+        # de verweesde Airtable-records van die gesprekken kan opruimen.
+        if merged_out is not None:
+            loser_conv_rows = await db.execute(
+                select(Conversation.id).where(Conversation.contact_id == loser.id)
+            )
+            merged_out.extend(r[0] for r in loser_conv_rows.all())
         # Herkoppel de gesprekken van de verliezer en verwijder de verliezer.
         await db.execute(
             update(Conversation)
