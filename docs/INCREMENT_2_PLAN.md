@@ -185,18 +185,44 @@ van het `Contact` (val terug op `conversation.wa_contact_*`).
   wordt **één** profiel (merge-test uit B) **en laat geen duplicaat-record in Airtable achter**;
   geen hardcoded org/secrets. **Stop voor sign-off.**
 
-### 2b. E-mail-intake
+### 2b. E-mail-intake — BESLIST: Resend Inbound (webhook), bevestigd 2026-06-07
 
-> **Open beslissing (te bevestigen bij start 2b): inbound-e-mailprovider.** Resend is enkel
-> *uitgaand*. Inbound vereist óf IMAP-polling (een achtergrond-poller/cron) óf een
-> inbound-parse-webhook (Postmark/SendGrid/Resend Inbound). Keuze bepaalt de infra. Aanbeveling
-> in plan vastleggen vóór bouw.
+**Provider = Resend Inbound** (push/webhook). Reden: Resend is er al voor uitgaand (vendor + key
+aanwezig) en het push-model past exact op het bestaande Meta-webhook-patroon. IMAP-poller en
+Postmark/SendGrid afgewezen (resp. meer eigen code/poll-latency, en een extra vendor).
 
-- Trigger (poller of webhook) → parse afzender/onderwerp/body → `channel="email"` → helper (B).
-- Bij ontbrekende verplichte velden: AI stuurt **max. één** opvolgmail met gerichte vragen vóór
-  escalatie naar de eindklant (dossier §5.3). Hergebruik `email_service` (SMTP/Resend uitgaand).
-- **DoD 2b:** een inkomende e-mail wordt een lead in hetzelfde profiel (match op e-mail);
-  max. één opvolgmail; end-to-end getest met een realistisch bericht. **Stop voor sign-off.**
+**Org-routing (bevestigd):** plus-addressing `intake+{org_id}@inbound.repto.be` — de webhook leest
+het `To`-adres, haalt `org_id` eruit, valideert tegen de DB; onbekend = stil genegeerd. Géén
+migratie (opaque `org_id`, consistent met 2a). *Follow-up (later, mét migratie): leesbare slug.*
+
+**Verplichte velden voor de opvolgmail (bevestigd):** **naam + type werk/vraag**.
+
+- **A. Webhook:** nieuw `POST /webhooks/email` (in `routers/webhooks.py`). Resend-signature
+  verifiëren (Svix-stijl: `svix-id`/`svix-timestamp`/`svix-signature` + `RESEND_WEBHOOK_SECRET`),
+  mirror van `_signature_valid`. Snel 200, verwerking via `BackgroundTasks`. Exacte payload- en
+  header-vorm vóór bouw tegen de Resend-docs verifiëren — niet op geheugen.
+- **B. Parsen → intake:** afzender-e-mail/naam, onderwerp, tekst-body (HTML→tekst fallback) →
+  `create_or_update_conversation(channel="email", …)` → body als inbound `Message`. E-mail is vrije
+  tekst → `_extract_lead_data` (Haiku) op onderwerp+body (zoals een WhatsApp-bericht), dan score op
+  het Contact + `crm_sync.sync()` direct (geen ≥3-gate) + notificatie. Merge + orphan-cleanup
+  komen mee via de bestaande plumbing.
+- **C. Max één opvolgmail (dossier §5.3):** ontbreekt naam of type werk ÉN is er nog geen uitgaande
+  mail op dit gesprek → AI stelt één korte NL-opvolgmail op (Resend uitgaand), opgeslagen als
+  outbound `Message`. "Max één" geteld via #outbound Messages (≥1 → geen nieuwe). Geen migratie.
+- **D. Loop-/spam-guard:** mails met `Auto-Submitted`/`List-*`-headers of onze eigen
+  intake-afzender worden genegeerd (geen lead/loop op autoreplies).
+- **E. Config/infra:** nieuw `RESEND_WEBHOOK_SECRET`, `EMAIL_INTAKE_DOMAIN` (`inbound.repto.be`),
+  `EMAIL_INTAKE_FROM`. DNS: MX van het inbound-(sub)domein → Resend + webhook-URL in Resend-dashboard
+  (handmatige stap, zoals destijds de Meta Callback-URL).
+
+**Bestanden:** `routers/webhooks.py` (+route+signature), nieuw `services/email_intake_service.py`
+(parsing/org-routing/verrijking/opvolg-logica), `services/email_service.py` (opvolgmail-functie),
+`config.py` (+3 vars), nieuw `tests/test_email_intake_service.py`, `.env.example`.
+
+- **DoD 2b:** een inkomende e-mail wordt een lead in **hetzelfde profiel** (match op e-mail; merge +
+  orphan-cleanup gelden); **precies één** opvolgmail bij ontbrekende velden, daarna geen; org-routing
+  via To-adres (onbekend → genegeerd); signature afgedwongen; geen hardcoded secrets; end-to-end
+  getest met een realistische payload. **Stop voor sign-off.**
 
 ### 2c. Web-chat
 
