@@ -224,6 +224,30 @@ migratie (opaque `org_id`, consistent met 2a). *Follow-up (later, mét migratie)
   via To-adres (onbekend → genegeerd); signature afgedwongen; geen hardcoded secrets; end-to-end
   getest met een realistische payload. **Stop voor sign-off.**
 
+#### Status 2b — AFGEROND (2026-06-07), suite groen (67 passed)
+
+Geleverd: `POST /webhooks/email` + Svix-verificatie, `email_intake_service.py` (org-routing,
+body-fetch via Resend Received-Emails API, loop/spam-guard, verrijking, score, CRM-sync,
+orphan-cleanup, max-één opvolgmail), `email_service.send_followup_email`, config + tests
+(`test_email_intake_service.py`). Resend-schema's tegen de docs geverifieerd (metadata-only
+webhook + aparte body-GET; Svix-signing).
+
+**Beslissing eigenaar (2026-06-07): notificatie-timing = ALTIJD DIRECT.** Bij een onvolledige
+e-mail-lead krijgt de agency tóch meteen de notificatie (geen wachten op een complete lead),
+zodat geen enkele lead gemist wordt als de afzender niet op de opvolgmail reageert. De §5.3-eis
+("max één opvolgmail vóór verdere escalatie naar de eindklant") wordt vervuld door de begrensde
+opvolgmail, niet door de notificatie te gaten.
+
+**Bekende, bewuste beperkingen (non-blocking):**
+- *Geen idempotency op `email_id`*: Svix levert at-least-once. Een herlevering hergebruikt het
+  gesprek (geen duplicaat-lead/Airtable-record) maar voegt een 2e inbound `Message` toe en vuurt
+  een 2e notificatie — zelfde patroon als de bestaande WhatsApp-webhook (ook geen dedup daar).
+- *`merged_out`/cleanup in het e-mailpad is onbereikbaar* (e-mail stuurt altijd `phone=None` →
+  hooguit één contact-match, dus geen merge vanuit dit pad). Bewust behouden voor symmetrie/
+  toekomstige telefoon-dragende parsers; de kanaal-overschrijdende merge voor een e-maillead
+  vuurt nog steeds later via `extract_and_enrich` (al getest in 2a).
+- *Web/e-mail-gesprekken bereiken nooit `closed`* (zoals web-form): tellen blijvend als "actief".
+
 ### 2c. Web-chat
 
 - Conversationele widget met sessie-geheugen — feitelijk de WhatsApp-AI-lus op het web. Nieuw
