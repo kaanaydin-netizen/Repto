@@ -77,3 +77,51 @@ async def create_or_update_conversation(
         await db.refresh(conversation)
 
     return conversation
+
+
+# Stabiele namespace voor deterministische web-chat-gesprek-id's uit een sessie-id.
+_WEBCHAT_NS = uuid.uuid5(uuid.NAMESPACE_URL, "repto-webchat")
+
+
+async def get_or_create_web_chat_conversation(
+    db: AsyncSession,
+    org: Organization,
+    *,
+    session_id: str,
+    name: Optional[str] = None,
+    email: Optional[str] = None,
+    phone: Optional[str] = None,
+    merged_out: Optional[list] = None,
+) -> Conversation:
+    """
+    Web-chat is SESSIE-gekeyd, niet identiteit-gekeyd: een bezoeker kan anoniem starten
+    (nog geen e-mail/telefoon) en de chat moet over meerdere berichten hetzelfde gesprek
+    + geheugen behouden. We leiden daarom een DETERMINISTISCHE gesprek-id af uit
+    (org, session_id) — zo vindt elke vervolg-POST exact hetzelfde gesprek terug.
+
+    Bij creatie koppelen we een Contact via resolve_contact (met e-mail/telefoon indien
+    al bekend; anders een vers anoniem Contact). Wordt later in de chat een e-mail ontdekt,
+    dan voegt extract_and_enrich dat alsnog samen met een bestaand profiel.
+    """
+    conv_id = str(uuid.uuid5(_WEBCHAT_NS, f"{org.id}:{session_id}"))
+    conversation = await db.get(Conversation, conv_id)
+    if conversation is not None:
+        return conversation
+
+    contact = await resolve_contact(
+        db, org.id, email=email, phone=phone, name=name, channel="web_chat",
+        merged_out=merged_out,
+    )
+    conversation = Conversation(
+        id=conv_id,
+        org_id=org.id,
+        contact_id=contact.id,
+        channel="web_chat",
+        wa_contact_phone=phone,
+        wa_contact_name=name,
+        status="new",
+    )
+    db.add(conversation)
+    await db.commit()
+    await db.refresh(conversation)
+    return conversation

@@ -23,15 +23,13 @@ from fastapi.responses import PlainTextResponse
 from app.config import get_settings
 from app.database import AsyncSessionLocal
 from app.services.whatsapp_service import WhatsAppService
-from app.services.ai_service import AIService
+from app.services.ai_service import AIService, CLOSING_TAG
 from app.services.email_service import send_lead_notification
 from app.services.email_intake_service import process_inbound_email
 
 settings = get_settings()
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
-
-CLOSING_TAG = "[GESPREK_AFGEROND]"
 
 
 # ─── GET: verificatie-handshake ────────────────────────────────────────────────

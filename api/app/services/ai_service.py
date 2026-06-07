@@ -19,6 +19,10 @@ from app.models.conversation import Conversation, Message, Organization, Appoint
 settings = get_settings()
 logger = logging.getLogger(__name__)
 
+# Tag die de AI aan het eind van een afgerond gesprek toevoegt (zie system-prompt).
+# Eén bron van waarheid voor alle kanalen (WhatsApp-webhook + web-chat).
+CLOSING_TAG = "[GESPREK_AFGEROND]"
+
 # ─── Sector-specifieke systeem-prompts ────────────────────────────────────────
 # Placeholders: {company_name}, {tone}, {company_info}
 

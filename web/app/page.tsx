@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 import MobileNav from '@/components/MobileNav'
 import WhatsAppWidget from '@/components/WhatsAppWidget'
+import ChatWidget from '@/components/ChatWidget'
 import PricingToggle from '@/components/PricingToggle'
 import { SECTORS } from '@/lib/sectors'
 
@@ -953,6 +954,9 @@ export default async function HomePage() {
 
       {/* Zwevende WhatsApp-knop — verschijnt zodra een echt nummer is ingesteld */}
       <WhatsAppWidget />
+
+      {/* Zwevende web-chat — live productdemo; verbergt zich als de intake niet geconfigureerd is */}
+      <ChatWidget />
 
     </div>
   )

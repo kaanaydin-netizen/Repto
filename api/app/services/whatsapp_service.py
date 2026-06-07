@@ -211,6 +211,7 @@ class WhatsAppService:
                         # die worden SAMENGEVOEGD — anders krijg je twee contacten met dezelfde
                         # e-mail (DoD §3 kanaal-overschrijdend profiel). resolve_contact regelt
                         # zowel het aanvullen (geen match) als de merge (botsing).
+                        old_contact_id = contact.id
                         contact = await resolve_contact(
                             self.db, conversation.org_id,
                             phone=contact.phone, email=norm_email, name=contact.name,
@@ -218,6 +219,17 @@ class WhatsAppService:
                         )
                         if conversation.contact_id != contact.id:
                             conversation.contact_id = contact.id
+                            # Anoniem gestarte web-chat: het oude contact had geen e-mail/telefoon,
+                            # dus resolve_contact vond het NIET als match en _merge_contacts ruimde
+                            # het niet op. Was dit gesprek het enige van dat oude contact, dan is het
+                            # nu verweesd: behandel het als merge-verliezer — z'n (mogelijk reeds
+                            # gesyncte) record opruimen via merged_conv_ids en het lege contact weg.
+                            # (WhatsApp/e-mail bereiken dit pad óók, maar no-oppen: daar deed
+                            # _merge_contacts de opruiming al — db.get(old) is None, conv staat al in
+                            # merged_conv_ids. Bewezen door test_cross_channel_merge_cleans_orphan.)
+                            await self._reap_abandoned_contact(
+                                conversation, old_contact_id, merged_conv_ids
+                            )
                     score, reason = compute_lead_score(lead)
                     contact.score = score
                     contact.score_reason = reason
@@ -235,6 +247,36 @@ class WhatsAppService:
             # Niet-kritisch: een fout hier mag de reply/notificatie/sync nooit blokkeren.
             logger.error("extract_and_enrich fout voor gesprek %s: %s", conversation.id, e)
             return None
+
+    async def _reap_abandoned_contact(
+        self, conversation: Conversation, old_contact_id: str, merged_conv_ids: list
+    ) -> None:
+        """
+        Verwijder een contact dat door een identiteits-onthulling verweesd raakte.
+
+        Treedt op bij een anoniem gestarte web-chat: het beginpunt is een sleutelloos
+        Contact; zodra de bezoeker z'n e-mail noemt, herkoppelt extract_and_enrich het
+        gesprek naar het bestaande e-mail-Contact. Bezat het oude Contact enkel dit ene
+        (nu herkoppelde) gesprek, dan staat het nu leeg. Het stale Airtable-record van dat
+        gesprek is nog op het óúde Contact gekeyd; we voegen het gesprek toe aan
+        merged_conv_ids zodat cleanup_merged_records het opruimt, en verwijderen het Contact.
+        """
+        if old_contact_id == conversation.contact_id:
+            return
+        # conversation.contact_id is al herkoppeld (autoflush vóór deze query) → een
+        # resterend gesprek betekent dat het oude Contact nog elders in gebruik is.
+        remaining = (await self.db.execute(
+            select(Conversation.id)
+            .where(Conversation.contact_id == old_contact_id)
+            .limit(1)
+        )).first()
+        if remaining is not None:
+            return
+        if conversation.id not in merged_conv_ids:
+            merged_conv_ids.append(conversation.id)
+        old_contact = await self.db.get(Contact, old_contact_id)
+        if old_contact is not None:
+            await self.db.delete(old_contact)
 
     async def sync_to_crm(self, conversation: Conversation, lead: Optional[dict] = None) -> None:
         """
