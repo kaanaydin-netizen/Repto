@@ -88,6 +88,49 @@ async def send_lead_notification(conversation: Conversation, db: AsyncSession) -
         logger.error(f"E-mailnotificatie fout: {e}")
 
 
+async def send_followup_email(to_email: str, subject: str, body_text: str) -> bool:
+    """
+    Stuur één opvolgmail naar een e-maillead (increment 2b) via Resend (uitgaand).
+    Afzender = settings.email_intake_from. Geeft True bij succes, False als Resend niet
+    geconfigureerd is of de verzending faalt (niet-kritisch — nooit doorgooien).
+    """
+    if not settings.resend_api_key:
+        logger.debug("Opvolgmail overgeslagen — RESEND_API_KEY niet ingesteld.")
+        return False
+    # Eenvoudige, veilige HTML (platte tekst → <br>). Geen externe input in attributen.
+    safe = (
+        body_text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        .replace("\n", "<br>")
+    )
+    html = (
+        '<div style="font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',sans-serif;'
+        'font-size:14px;color:#111827;line-height:1.6;">' + safe + "</div>"
+    )
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.post(
+                RESEND_API_URL,
+                headers={
+                    "Authorization": f"Bearer {settings.resend_api_key}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "from": settings.email_intake_from,
+                    "to": [to_email],
+                    "subject": subject,
+                    "html": html,
+                },
+            )
+        if resp.status_code in (200, 201):
+            logger.info("📧 Opvolgmail verstuurd naar %s", to_email)
+            return True
+        logger.warning("⚠️ Opvolgmail mislukt (%s): %s", resp.status_code, resp.text[:200])
+        return False
+    except Exception as e:
+        logger.error("Opvolgmail fout: %s", e)
+        return False
+
+
 _SCORE_STYLES = {
     "warm": ("🔥 Warm", "#fee2e2", "#b91c1c"),
     "lauw": ("🌤️ Lauw", "#fef3c7", "#b45309"),

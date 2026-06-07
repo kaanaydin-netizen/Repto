@@ -50,6 +50,11 @@ class Settings(BaseSettings):
     notification_email: Optional[str] = None     # E-mailadres voor lead-notificaties
     notification_from: str = "Repto <noreply@repto.be>"  # Afzender (na domeinverificatie in Resend)
 
+    # E-mail-intake (increment 2b — Resend Inbound)
+    resend_webhook_secret: Optional[str] = None  # Svix-secret (whsec_...) voor /webhooks/email
+    email_intake_domain: Optional[str] = None    # bv. "inbound.repto.be" (plus-addressing)
+    email_intake_from: str = "Repto <intake@repto.be>"  # Afzender van de opvolgmail
+
     # Google Sheets — service account (compact JSON string)
     google_sheets_credentials_b64: Optional[str] = None  # legacy
     google_sheets_credentials_json: Optional[str] = None

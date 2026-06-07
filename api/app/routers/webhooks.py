@@ -10,10 +10,12 @@ De inkomende DB-sessie wordt niet doorgegeven aan de background task; die opent 
 eigen sessie (de request-sessie is al gesloten tegen de tijd dat de task draait).
 """
 from __future__ import annotations
+import base64
 import hashlib
 import hmac
 import json
 import logging
+import time
 
 from fastapi import APIRouter, Request, BackgroundTasks, HTTPException
 from fastapi.responses import PlainTextResponse
@@ -23,6 +25,7 @@ from app.database import AsyncSessionLocal
 from app.services.whatsapp_service import WhatsAppService
 from app.services.ai_service import AIService
 from app.services.email_service import send_lead_notification
+from app.services.email_intake_service import process_inbound_email
 
 settings = get_settings()
 logger = logging.getLogger(__name__)
@@ -70,6 +73,45 @@ def _signature_valid(raw_body: bytes, signature_header: str | None) -> bool:
     ).hexdigest()
     received = signature_header.split("=", 1)[1]
     return hmac.compare_digest(expected, received)
+
+
+def _resend_signature_valid(raw_body: bytes, headers) -> bool:
+    """
+    Verifieer de Svix-ondertekening van een Resend-webhook (inbound e-mail).
+
+    Svix tekent `{svix-id}.{svix-timestamp}.{raw_body}` met HMAC-SHA256 onder de
+    base64-gedecodeerde secret (na de 'whsec_'-prefix); de svix-signature-header bevat
+    één of meer spatie-gescheiden 'v1,<base64sig>'-tokens. We controleren óók de
+    timestamp (±5 min) tegen replay. Alleen actief als RESEND_WEBHOOK_SECRET gezet is.
+    """
+    secret = settings.resend_webhook_secret
+    if not secret:
+        logger.warning("RESEND_WEBHOOK_SECRET niet gezet — e-mail-webhook verificatie UIT.")
+        return True  # verificatie uitgeschakeld (dev), net als de WhatsApp-variant
+    svix_id = headers.get("svix-id")
+    svix_ts = headers.get("svix-timestamp")
+    svix_sig = headers.get("svix-signature")
+    if not (svix_id and svix_ts and svix_sig):
+        return False
+    try:
+        if abs(time.time() - int(svix_ts)) > 300:
+            return False
+    except (TypeError, ValueError):
+        return False
+    key = secret[len("whsec_"):] if secret.startswith("whsec_") else secret
+    try:
+        key_bytes = base64.b64decode(key)
+    except Exception:
+        return False
+    signed = f"{svix_id}.{svix_ts}.".encode() + raw_body
+    expected = base64.b64encode(
+        hmac.new(key_bytes, signed, hashlib.sha256).digest()
+    ).decode()
+    for token in svix_sig.split(" "):
+        sig = token.split(",", 1)[1] if "," in token else token
+        if hmac.compare_digest(sig, expected):
+            return True
+    return False
 
 
 # ─── POST: inkomende berichten ─────────────────────────────────────────────────
@@ -221,3 +263,45 @@ async def process_incoming_message(
         except Exception as e:
             logger.error("❌ Fout bij verwerking bericht van %s: %s", from_phone, e)
             raise
+
+
+# ─── POST: inkomende e-mail (Resend Inbound) ───────────────────────────────────
+
+@router.post("/email")
+async def receive_email(request: Request, background_tasks: BackgroundTasks):
+    """
+    Ontvangt de Resend Inbound 'email.received'-webhook (metadata-only). We verifiëren
+    de Svix-ondertekening, bevestigen snel met 200, en halen de eigenlijke body op +
+    verwerken op de achtergrond (de body zit NIET in de webhook — die fetchen we apart).
+    """
+    raw_body = await request.body()
+
+    if not _resend_signature_valid(raw_body, request.headers):
+        logger.warning("Ongeldige Resend/Svix-signature — e-mailpayload geweigerd.")
+        raise HTTPException(status_code=403, detail="Ongeldige signature")
+
+    try:
+        data = json.loads(raw_body or b"{}")
+    except json.JSONDecodeError:
+        logger.warning("E-mail-webhookpayload is geen geldige JSON.")
+        return {"status": "ignored"}
+
+    if data.get("type") != "email.received":
+        return {"status": "ignored"}
+
+    payload = data.get("data", {}) or {}
+    email_id = payload.get("email_id")
+    to_list = payload.get("to") or []
+    from_addr = payload.get("from")
+    subject = payload.get("subject") or ""
+    if not email_id or not to_list:
+        return {"status": "ignored"}
+
+    background_tasks.add_task(
+        process_inbound_email,
+        email_id=email_id,
+        to_list=to_list,
+        from_addr=from_addr,
+        subject=subject,
+    )
+    return {"status": "ok"}
