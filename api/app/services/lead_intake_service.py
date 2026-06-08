@@ -31,6 +31,7 @@ async def create_or_update_conversation(
     email: Optional[str] = None,
     phone: Optional[str] = None,
     merged_out: Optional[list] = None,
+    reuse_any_status: bool = False,
 ) -> Conversation:
     """
     Koppel deze inkomende lead aan één Contact en één open Conversation binnen `org`.
@@ -52,13 +53,18 @@ async def create_or_update_conversation(
         merged_out=merged_out,
     )
 
+    # Standaard hergebruiken we enkel een OPEN gesprek. Voor eenmalige kanalen (web-form)
+    # mag het gesprek meteen 'closed' staan; reuse_any_status=True laat een herinzending dan
+    # tóch hetzelfde gesprek hergebruiken (geen rij-proliferatie per resubmit).
+    conditions = [
+        Conversation.org_id == org.id,
+        Conversation.contact_id == contact.id,
+        Conversation.channel == channel,
+    ]
+    if not reuse_any_status:
+        conditions.append(Conversation.status.in_(_OPEN_STATUSES))
     result = await db.execute(
-        select(Conversation).where(
-            Conversation.org_id == org.id,
-            Conversation.contact_id == contact.id,
-            Conversation.channel == channel,
-            Conversation.status.in_(_OPEN_STATUSES),
-        )
+        select(Conversation).where(*conditions).order_by(Conversation.created_at.desc())
     )
     conversation = result.scalars().first()
 

@@ -73,8 +73,11 @@ def _build_lead(form: WebFormIn) -> dict:
         "urgentie": form.urgentie,
         "intentie": form.intentie or "Afspraak",
         "samenvatting": " — ".join(samenvatting_parts) or f"Webformulier-aanvraag ({form.sector or 'algemeen'})",
-        "opvolging_nodig": False,
-        "opvolg_reden": None,
+        # Een web-formulier is een eenmalige inzending die de agency moet opvolgen (terugbellen/
+        # mailen). Met het gesprek op 'closed' levert dit Airtable-status 'Op te volgen' op
+        # (zie _pipeline_status) i.p.v. eeuwig 'Nieuw'.
+        "opvolging_nodig": True,
+        "opvolg_reden": "Web-formulier-aanvraag — opvolgen door agency.",
         "opvolg_datum": None,
     }
 
@@ -111,8 +114,13 @@ async def web_form_intake(form: WebFormIn, db: AsyncSession = Depends(get_db)):
     conversation = await create_or_update_conversation(
         db, org,
         channel="web_form", name=form.name, email=str(form.email), phone=form.phone,
-        merged_out=merged_conv_ids,
+        merged_out=merged_conv_ids, reuse_any_status=True,
     )
+    # Eenmalige, volledige inzending → geen lopend gesprek. Meteen afsluiten: telt niet als
+    # actief gesprek en levert (met opvolging_nodig in _build_lead) Airtable-status
+    # 'Op te volgen' op i.p.v. eeuwig 'Nieuw'. Een herinzending hergebruikt dit gesprek
+    # (reuse_any_status) en upsert hetzelfde Airtable-record (Bron ID=contact.id).
+    conversation.status = "closed"
 
     # 2. Inkomend bericht bewaren (voedt dashboard + notificatie-preview).
     db.add(Message(

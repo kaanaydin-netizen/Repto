@@ -121,6 +121,40 @@ async def test_web_form_invalid_email_422(session):
     assert ei.value.status_code == 422
 
 
+@pytest.mark.asyncio
+async def test_web_form_closes_and_reuses_on_resubmit(session):
+    """
+    Een web-form is een eenmalige, volledige inzending: het gesprek wordt meteen 'closed'
+    (telt niet als actief gesprek; levert met opvolging_nodig Airtable-status 'Op te volgen').
+    Een herinzending door dezelfde persoon hergebruikt hetzelfde gesprek — geen rij-proliferatie.
+    """
+    from app.routers.intake import _build_lead
+    from app.services.crm_sync_service import _pipeline_status
+
+    session.add(Organization(id="org-x", name="X", crm_type="none"))
+    await session.commit()
+
+    out1 = await web_form_intake(
+        WebFormIn(org_id="org-x", name="Jan", email="jan@x.be", message="Demo graag"), db=session)
+    conv1 = await session.get(Conversation, out1.conversation_id)
+    assert conv1.status == "closed"
+
+    # Eenmalige inzending → Airtable-pijplijn 'Op te volgen' (closed + opvolging_nodig).
+    lead = _build_lead(WebFormIn(org_id="org-x", name="Jan", email="jan@x.be", message="Demo graag"))
+    assert lead["opvolging_nodig"] is True
+    assert _pipeline_status(conv1, has_appointment=False, lead=lead) == "Op te volgen"
+
+    # Herinzending zelfde persoon → zelfde gesprek hergebruikt, geen tweede rij.
+    out2 = await web_form_intake(
+        WebFormIn(org_id="org-x", name="Jan", email="jan@x.be", message="Nog een vraag"), db=session)
+    assert out2.conversation_id == out1.conversation_id
+    convs = (await session.execute(
+        select(Conversation).where(Conversation.org_id == "org-x",
+                                   Conversation.channel == "web_form")
+    )).scalars().all()
+    assert len(convs) == 1
+
+
 # ─── Kanaal-overschrijdend profiel + orphan-cleanup (DoD §3) ────────────────────
 
 @pytest.mark.asyncio
