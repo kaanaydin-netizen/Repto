@@ -49,6 +49,10 @@ from app.models.conversation import Organization, Conversation  # noqa: E402
 
 AIRTABLE_API_URL = "https://api.airtable.com/v0"
 
+# Airtable staat ~5 requests/sec toe. Mutaties (PATCH/DELETE) lopen sequentieel; een korte
+# pauze houdt ons veilig onder de limiet. Tests zetten dit op 0.
+_THROTTLE_SECONDS = 0.2
+
 
 def _db_url() -> str:
     url = os.environ.get("DATABASE_URL", "")
@@ -96,24 +100,43 @@ async def backfill_org(db: AsyncSession, org: Organization, apply: bool) -> None
     async with httpx.AsyncClient(timeout=30) as client:
         records = await _list_airtable_records(client, base_id, api_key, leads_table)
 
-        groups: dict = {}      # contact.id -> [record, ...] (te herschrijven/collaberen)
-        already_ok, unresolved = [], []
+        # Groepeer ÁLLE records per uiteindelijke contact.id — zowel de records die al correct
+        # op contact.id staan ("correct") als de oude, op conversation.id gekeyde ("rewrite").
+        # Eén persoon kan meerdere records hebben (meerdere gesprekken); die collaberen tot één.
+        # Door de al-correcte records mee te groeperen blijft het script idempotent én veilig
+        # als het ooit ná de code-deploy draait (anders zou een rewrite een duplicaat maken
+        # naast een reeds-correct record).
+        groups: dict = {}      # contact.id -> {"correct": [...], "rewrite": [...]}
+        unresolved = []
         for rec in records:
             bron = (rec.get("fields") or {}).get("Bron ID")
             if bron in known_contact_ids:
-                already_ok.append(rec)                 # idempotent: al op contact.id
+                groups.setdefault(bron, {"correct": [], "rewrite": []})["correct"].append(rec)
             elif bron in conv_to_contact and conv_to_contact[bron]:
-                groups.setdefault(conv_to_contact[bron], []).append(rec)
+                cid = conv_to_contact[bron]
+                groups.setdefault(cid, {"correct": [], "rewrite": []})["rewrite"].append(rec)
             else:
                 unresolved.append(rec)                 # geen bekend gesprek → niet aanraken
 
-        collapses = {cid: recs for cid, recs in groups.items() if len(recs) > 1}
-        n_rewrite = sum(len(r) for r in groups.values())
-        n_delete = sum(len(r) - 1 for r in collapses.values())
+        # Plan per contact: houd één survivor over (bij voorkeur een al-correct record, dan
+        # is geen PATCH nodig), herschrijf anders de eerste oude record, en verwijder de rest.
+        plan = []              # (survivor_rec, needs_patch: bool, [dup_recs])
+        for contact_id, g in groups.items():
+            if g["correct"]:
+                survivor, needs_patch = g["correct"][0], False
+                dups = g["correct"][1:] + g["rewrite"]
+            else:
+                survivor, needs_patch = g["rewrite"][0], True
+                dups = g["rewrite"][1:]
+            plan.append((contact_id, survivor, needs_patch, dups))
+
+        n_patch = sum(1 for _, _, needs_patch, _ in plan if needs_patch)
+        n_delete = sum(len(dups) for _, _, _, dups in plan)
+        n_noop = sum(1 for _, _, needs_patch, dups in plan if not needs_patch and not dups)
 
         print(f"  📋 {org.name}: {len(records)} records | "
-              f"al-ok={len(already_ok)} | herschrijven={n_rewrite} | "
-              f"collapse-groepen={len(collapses)} (verwijderen={n_delete}) | "
+              f"al-ok={n_noop} | herschrijven={n_patch} | "
+              f"contact-groepen={len(plan)} | verwijderen={n_delete} | "
               f"onresolvebaar={len(unresolved)}")
         if unresolved:
             print(f"     ⚠️  {len(unresolved)} record(s) met onbekende Bron ID — handmatig nakijken, "
@@ -124,20 +147,26 @@ async def backfill_org(db: AsyncSession, org: Organization, apply: bool) -> None
             return
 
         headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
-        for contact_id, recs in groups.items():
-            survivor = recs[0]                          # houd er één over
-            patch = await client.patch(
-                f"{AIRTABLE_API_URL}/{base_id}/{leads_table}/{survivor['id']}",
-                headers=headers, json={"fields": {"Bron ID": contact_id}},
-            )
-            if patch.status_code != 200:
-                print(f"     ❌ PATCH faalde voor {survivor['id']}: {patch.text[:200]}")
-                continue
-            for dup in recs[1:]:                        # verwijder de duplicaten
+        n_patched = n_deleted = 0
+        for contact_id, survivor, needs_patch, dups in plan:
+            if needs_patch:
+                patch = await client.patch(
+                    f"{AIRTABLE_API_URL}/{base_id}/{leads_table}/{survivor['id']}",
+                    headers=headers, json={"fields": {"Bron ID": contact_id}},
+                )
+                await asyncio.sleep(_THROTTLE_SECONDS)
+                if patch.status_code != 200:
+                    print(f"     ❌ PATCH faalde voor {survivor['id']}: {patch.text[:200]} "
+                          f"— duplicaten van deze groep NIET verwijderd.")
+                    continue                            # survivor niet bevestigd → dups behouden
+                n_patched += 1
+            for dup in dups:                            # verwijder de overtollige records
                 await client.delete(
                     f"{AIRTABLE_API_URL}/{base_id}/{leads_table}/{dup['id']}", headers=headers,
                 )
-        print(f"     ✅ Toegepast: {n_rewrite} herschreven, {n_delete} verwijderd.")
+                await asyncio.sleep(_THROTTLE_SECONDS)
+                n_deleted += 1
+        print(f"     ✅ Toegepast: {n_patched} herschreven, {n_deleted} verwijderd.")
 
 
 async def main(apply: bool) -> None:
